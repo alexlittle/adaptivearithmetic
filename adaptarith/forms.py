@@ -13,3 +13,11 @@ class UserLoginForm(AuthenticationForm):
             'placeholder': ''
         }
 ))
+
+
+class AnswerForm(forms.Form):
+    response = forms.IntegerField(
+        widget=forms.NumberInput(attrs={'step': 1}),
+        label="Your Answer",
+        help_text="Enter your answer.",
+    )

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<h1>{% trans 'Pre Test Complete!' %}</h1>
+
+<ul>
+{% for kl in knowledge_levels %}
+    <li>{{ kl.topic }} {{ kl.score }}</li>
+{% endfor %}
+</ul>
+
+<a href="">{% trans 'Start improving you knowledge levels!' %}</a>
+{% endblock %}

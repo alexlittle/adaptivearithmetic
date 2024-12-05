@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+
+<p>{{ question }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Next</button>
+</form>
+
+
+{% endblock %}

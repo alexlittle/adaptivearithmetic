@@ -1,4 +1,4 @@
-from config import *
+import dqn_model.dqn_config as model_cfg
 import random
 
 
@@ -6,8 +6,8 @@ class Quiz():
 
     def generate_test(self):
         self.questions = []
-        for topic in TOPICS:
-            for level in LEVELS:
+        for topic in model_cfg.TOPICS:
+            for level in model_cfg.LEVELS:
                 q1 = Question()
                 q1.generate_question(topic, level)
                 self.questions.append(q1)
@@ -16,6 +16,7 @@ class Quiz():
                 self.questions.append(q2)
         # shuffle into random order
         random.shuffle(self.questions)
+        return self.questions
 
     def mark_test(self):
         self.score = 0
@@ -29,7 +30,7 @@ class Quiz():
         knowledge = [0, 0, 0, 0]
         for q in self.questions:
             if q.mark_question():
-                knowledge[TOPICS.index(q.topic)] += INITIAL_KNOWLEDGE_POINTS_PER_QUESTION
+                knowledge[model_cfg.TOPICS.index(q.topic)] += model_cfg.INITIAL_KNOWLEDGE_POINTS_PER_QUESTION
         return knowledge
 
 
@@ -45,7 +46,7 @@ class Question():
         self.topic = topic
         self.level = level
 
-        ranges = RANGES[topic][level]
+        ranges = model_cfg.RANGES[topic][level]
         self.ft = random.choice(ranges['first_term'])
         self.st = random.choice(ranges['second_term'])
 

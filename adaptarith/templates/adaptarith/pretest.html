@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<h1>{% trans 'Pre Test' %}</h1>
+
+<h1>Question {{ progress.current }} of {{ progress.total }}</h1>
+<p>{{ question }}</p>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Next</button>
+</form>
+
+
+{% endblock %}
