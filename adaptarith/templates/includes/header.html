@@ -1,0 +1,32 @@
+{% load i18n %}
+{% load static %}
+{% block content %}
+	    <!-- Image and text -->
+<nav class="navbar navbar-expand-lg navbar-light">
+  <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  
+  <a class="navbar-brand" href="{% url 'adaptarith:index' %}">
+    {% trans 'Adaptive Arithmetic Demo' %}
+  </a>
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <div class="collapse navbar-collapse justify-content-end" id="navbarScroll">
+      <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" >
+        {% if user.is_authenticated %}
+            <li>{% trans 'Welcome' %}, {{ user.username }}</li>
+            <li> <form method="post" action="{% url 'adaptarith:logout' %}" style="display: inline;">
+                {% csrf_token %}
+            <button type="submit">{% trans 'Logout' %}</button>
+         </form></li>
+
+        {% else %}
+            <li><a href="{% url 'adaptarith:login' %}">{% trans 'Login' %}</a></li>
+        {% endif %}
+    </ul>
+
+    </div>
+</nav>
+	    
+	    
+{% endblock content %}

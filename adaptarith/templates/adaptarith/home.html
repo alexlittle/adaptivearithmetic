@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<h1>{% trans 'Welcome to Adaptive Arithmetic Demo!' %}</h1>
+
+<p>
+    {% blocktrans %}
+    This is a prototype site, so not everything may work correctly and it may be slow or unstable!
+    {% endblocktrans %}
+</p>
+
+
+{% endblock %}
