@@ -1,15 +1,18 @@
 import random
+import os
 import matplotlib.pyplot as plt
-from collections import namedtuple, deque
-from itertools import count
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from collections import namedtuple, deque
+from itertools import count
+from datetime import datetime
+
 from dqn_model.training_simulator import LearnerEnv
 from dqn_model.dqn import DQN
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
 
@@ -20,7 +23,6 @@ from django.utils.translation import gettext_lazy as _
 # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
 # TAU is the update rate of the target network
 # LR is the learning rate of the ``AdamW`` optimizer
-BATCH_SIZE = 512
 GAMMA = 0.99
 EPS_START = 1.0
 EPS_END = 0.05
@@ -102,12 +104,11 @@ def plot_durations(show_result=False):
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
-    plt.pause(0.001)
 
-def optimize_model():
-    if len(memory) < BATCH_SIZE:
+def optimize_model(batch_size):
+    if len(memory) < batch_size:
         return
-    transitions = memory.sample(BATCH_SIZE)
+    transitions = memory.sample(batch_size)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
     # to Transition of batch-arrays.
@@ -133,7 +134,7 @@ def optimize_model():
     # on the "older" target_net; selecting their best reward with max(1).values
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    next_state_values = torch.zeros(batch_size, device=device)
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
@@ -154,13 +155,40 @@ class Command(BaseCommand):
     help = _(u"For training DQN model")
     errors = []
 
+    def add_arguments(self, parser):
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        model_default_filename = f"model_dqn_{timestamp}.pth"
+        grpah_default_filename = f"training_results_{timestamp}.png"
+        parser.add_argument(
+            '--batch_size',
+            type=int,
+            default=128,
+            help='Size of each batch (default: 128)'
+        )
+        parser.add_argument(
+            '--num_episodes',
+            type=int,
+            default=100,
+            help='Number of episodes to process (default: 100)'
+        )
+        parser.add_argument(
+            '--model_output_filename',
+            type=str,
+            default=model_default_filename,
+            help=f'Output filename of model (default: {model_default_filename})'
+        )
+        parser.add_argument(
+            '--graph_output_filename',
+            type=str,
+            default=grpah_default_filename,
+            help=f'Output filename of graph of results (default: {grpah_default_filename})'
+        )
+
     def handle(self, *args, **options):
-
-        if torch.cuda.is_available() or torch.backends.mps.is_available():
-            num_episodes = 600
-        else:
-            num_episodes = 10
-
+        batch_size = options['batch_size']
+        num_episodes = options['num_episodes']
+        model_output_filename = options['model_output_filename']
+        graph_output_filename = options['graph_output_filename']
         for i_episode in range(num_episodes):
             # Initialize the environment and get its state
             state = env.reset()
@@ -185,7 +213,7 @@ class Command(BaseCommand):
                 state = next_state
 
                 # Perform one step of the optimization (on the policy network)
-                optimize_model()
+                optimize_model(batch_size)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -201,8 +229,10 @@ class Command(BaseCommand):
                     env.render()
                     break
 
-        torch.save(policy_net.state_dict(), "model_dqn.pth")
+        model_output_file = os.path.join(settings.BASE_DIR, 'output', model_output_filename)
+        graph_output_file = os.path.join(settings.BASE_DIR, 'output', graph_output_filename)
+        torch.save(policy_net.state_dict(), model_output_file)
         print('Complete')
         plot_durations(show_result=True)
-        plt.savefig('training-results.png', format='png', dpi=300)  # Specify the file name, format, and resolution
+        plt.savefig(graph_output_file, format='png', dpi=300)  # Specify the file name, format, and resolution
         plt.close()
