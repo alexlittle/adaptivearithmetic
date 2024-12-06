@@ -80,7 +80,7 @@ class LearnerEnv(gym.Env):
             if idx in random_correct_idxes:
                 q.response = q.get_correct_answer()
         kl = KnowledgeLevel()
-        k_levels = kl.get_training_init_knowledge_level(pre_test)
+        k_levels = kl.pre_test_init_knowledge_level(pre_test)
         return k_levels
 
     def _simulate_learning(self, level_str, topic_str, training=True):

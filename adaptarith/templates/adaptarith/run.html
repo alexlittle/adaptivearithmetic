@@ -5,6 +5,8 @@
 
 {% block content %}
 
+<h1>{% trans 'Your next question....' %}</h1>
+
 
 <p>{{ question }}</p>
 
@@ -14,5 +16,10 @@
     <button type="submit">Next</button>
 </form>
 
+<ul>
+{% for kl in knowledge_levels %}
+    <li>{{ kl.topic }} {{ kl.score }}</li>
+{% endfor %}
+</ul>
 
 {% endblock %}

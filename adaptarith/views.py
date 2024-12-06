@@ -3,6 +3,7 @@ from django.contrib.auth.views import LogoutView
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect
 from django.conf import settings
+from django.db.models import Max
 
 from adaptarith.models import Question, KnowledgeLevel
 from adaptarith.forms import AnswerForm
@@ -23,8 +24,7 @@ def start_pretest(request):
     request.session.pop('current_question_index', None)
 
     # Generate a pre test - saving questions to db
-    quiz = Quiz()
-    questions = quiz.generate_pre_test()
+    questions = utils.generate_pre_test(user=request.user)
     question_ids = []
 
     for q in questions:
@@ -52,7 +52,6 @@ class PreTestQuestionView(FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        question = self.get_question()
         kwargs.update({'initial': {'response': None}})
         return kwargs
 
@@ -86,27 +85,17 @@ class PreTestQuestionView(FormView):
         return redirect(reverse('adaptarith:pretest_question'))
 
     def save_knowledge_levels(self, question_ids):
+        questions = Question.objects.filter(pk__in=question_ids)
 
-        db_questions = Question.objects.filter(pk__in=question_ids)
-        engine_questions = []
-        for q in db_questions:
-            qe = QuestionEngine()
-            qe.ft = q.first_term
-            qe.st = q.second_term
-            qe.level = q.level
-            qe.topic = q.topic
-            qe.set_answer(q.response)
-            engine_questions.append(qe)
-
-        quiz = QuizEngine()
-        quiz.questions = engine_questions
-        kls = quiz.init_knowledge_levels()
+        kl = KnowledgeLevel()
+        kls = kl.pre_test_init_knowledge_level(questions)
         for idx, kl in enumerate(kls):
             know_level = KnowledgeLevel()
             know_level.user = self.request.user
             know_level.topic = settings.ADAPTARITH_TOPICS[idx]
             know_level.score = kl
             know_level.save()
+
 
 
 class PreTestCompleteView(TemplateView):
@@ -124,22 +113,12 @@ class RunView(FormView):
 
     def get_question(self, knowledge_levels):
         #generate
-        # TODO
-        next_question = utils.get_next_question(self.request.user, knowledge_levels)
-
-        #save to DB
-        next_q_db = Question()
-        next_q_db.user = self.request.user
-        next_q_db.first_term = next_question.ft
-        next_q_db.second_term = next_question.st
-        next_q_db.level = next_question.level
-        next_q_db.topic = next_question.topic
-        next_q_db.save()
+        next_question = utils.get_next_question(self.request.user)
         # put in session
-        self.request.session['current_question'] = next_q_db.id
+        self.request.session['current_question'] = next_question.id
         self.request.session.modified = True
 
-        return next_q_db
+        return next_question
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -150,19 +129,22 @@ class RunView(FormView):
 
     def form_valid(self, form):
         # get from session
-        question = self.request.session['current_question']
+        q_id = self.request.session['current_question']
+        question = Question.objects.get(pk=q_id)
         question.response = form.cleaned_data['response']
         question.save()
 
-        # mark and update knowledge level
-        qe = QuestionEngine()
-        qe.ft = question.first_term
-        qe.st = question.second_term
-        qe.level = question.level
-        qe.topic = question.topic
-        qe.set_answer(question.response)
+        score = 0
+        if question.response == question.get_correct_answer():
+            score = settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        # TODO
+        latest_score = KnowledgeLevel.get_latest_for_topic(self.request.user, question.topic)
+        if score != 0:
+            kl = KnowledgeLevel()
+            kl.user = self.request.user
+            kl.topic = question.topic
+            kl.score = latest_score + score
+            kl.save()
 
         # if is fully complete move to passed!
 

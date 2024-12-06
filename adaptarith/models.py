@@ -63,7 +63,16 @@ class KnowledgeLevel(models.Model):
     score = models.IntegerField(default=0)
 
     @staticmethod
-    def get_latest_for_user(self, user):
+    def get_latest_for_topic(user, topic):
+        try:
+            latest_kl = KnowledgeLevel.objects.filter(user=user, topic=topic).latest('create_date')
+            return latest_kl.score
+        except KnowledgeLevel.DoesNotExist:
+            return 0
+
+
+    @staticmethod
+    def get_latest_for_user(user):
         latest_dates = KnowledgeLevel.objects.filter(user=user).values('topic').annotate(
             latest_date=Max('create_date')
         )
@@ -75,10 +84,19 @@ class KnowledgeLevel(models.Model):
         return most_recent_rows
 
     @staticmethod
-    def get_training_init_knowledge_level(questions):
+    def get_latest_for_user_as_list(user):
+        as_query = KnowledgeLevel.get_latest_for_user(user)
+        knowledge = [0, 0, 0, 0]
+        for i in as_query:
+            knowledge[settings.ADAPTARITH_TOPICS.index(i.topic)] = i.score
+        return knowledge
+
+    @staticmethod
+    def pre_test_init_knowledge_level(questions):
         knowledge = [0, 0, 0, 0]
         for q in questions:
-            if q.mark_question(knowledge):
+            if q.response == q.get_correct_answer():
                 knowledge[settings.ADAPTARITH_TOPICS.index(
                     q.topic)] += settings.ADAPTARITH_INITIAL_KNOWLEDGE_POINTS_PER_QUESTION
         return knowledge
+
