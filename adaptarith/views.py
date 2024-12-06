@@ -4,9 +4,6 @@ from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect
 from django.conf import settings
 
-from dqn_model.quiz_engine import Quiz as QuizEngine
-from dqn_model.quiz_engine import Question as QuestionEngine
-
 from adaptarith.models import Question, KnowledgeLevel
 from adaptarith.forms import AnswerForm
 from adaptarith import utils
@@ -26,21 +23,12 @@ def start_pretest(request):
     request.session.pop('current_question_index', None)
 
     # Generate a pre test - saving questions to db
-    quiz = QuizEngine()
-    questions = quiz.generate_test()
+    quiz = Quiz()
+    questions = quiz.generate_pre_test()
     question_ids = []
 
     for q in questions:
-        question = Question()
-        question.user = request.user
-        question.pre_test = True
-        question.first_term = q.ft
-        question.second_term = q.st
-        question.level = q.level
-        question.topic = q.topic
-        question.save()
-        question_ids.append(question.id)
-
+        question_ids.append(q.id)
 
     # Save the randomized question order in the session
     request.session['question_ids'] = question_ids

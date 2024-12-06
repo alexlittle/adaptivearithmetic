@@ -5,8 +5,8 @@ import numpy as np
 from gym import spaces
 
 from django.conf import settings
-from dqn_model.quiz_engine import Quiz, Question
-
+from adaptarith.models import KnowledgeLevel
+from adaptarith import utils
 
 class LearnerEnv(gym.Env):
 
@@ -42,7 +42,9 @@ class LearnerEnv(gym.Env):
         topic = action % 4  # 0, 1, 2
 
         # Simulate knowledge gain or loss based on the action
-        reward = self._simulate_learning(level, topic)
+        topic_str = settings.ADAPTARITH_TOPICS[topic]
+        level_str = settings.ADAPTARITH_LEVELS[level]
+        reward = self._simulate_learning(level_str, topic_str)
 
         # Update state (simulate a change in knowledge levels)
         self.state[topic] += reward
@@ -67,44 +69,29 @@ class LearnerEnv(gym.Env):
         print(f"Step: {self.current_step}, Knowledge Levels: {self.state}")
 
     def _simulate_pre_test(self):
-        pre_test = Quiz()
-        pre_test.generate_test()
+        pre_test = utils.generate_pre_test(training=True)
 
         # add some randomness for the no questions correct
-        q_idx_range = range(0, len(pre_test.questions))
+        q_idx_range = range(0, len(pre_test))
         num_random_qs = random.randint(0, len(q_idx_range))
         random_correct_idxes = random.sample(q_idx_range, num_random_qs)
 
-        for idx, q in enumerate(pre_test.questions):
+        for idx, q in enumerate(pre_test):
             if idx in random_correct_idxes:
-                q.set_answer(q.get_correct_answer())
+                q.response = q.get_correct_answer()
+        kl = KnowledgeLevel()
+        k_levels = kl.get_training_init_knowledge_level(pre_test)
+        return k_levels
 
-        return pre_test.init_knowledge_levels()
-
-    def _simulate_learning(self, level, topic):
+    def _simulate_learning(self, level_str, topic_str, training=True):
 
         # get a question for given topic/level
-        question = Question()
-        ft, st = question.generate_question(settings.ADAPTARITH_TOPICS[topic], settings.ADAPTARITH_LEVELS[level])
+        question = utils.generate_question(topic_str, level_str, pretest=False, training=True)
 
         # set correct 2/3 of the time
-        if ft % 3 != 0:
-            question.set_answer(question.get_correct_answer())
+        if question.first_term % 3 != 0:
+            question.response = question.get_correct_answer()
 
+        marks = question.mark_question(self.state)
         # mark if correct & set the points
-        if not question.mark_question():
-            return settings.ADAPTARITH_POINTS_FOR_INCORRECT
-
-        if self.state[topic] in settings.ADAPTARITH_LEVEL_EASY_RANGE and level == settings.ADAPTARITH_LEVELS.index('easy'):
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if self.state[topic] in settings.ADAPTARITH_LEVEL_MOD_RANGE and level == settings.ADAPTARITH_LEVELS.index('mod'):
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if self.state[topic] in settings.ADAPTARITH_LEVEL_HARD_RANGE and level == settings.ADAPTARITH_LEVELS.index('hard'):
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if self.state[topic] in settings.ADAPTARITH_LEVEL_VHARD_RANGE and level == settings.ADAPTARITH_LEVELS.index('vhard'):
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        return settings.ADAPTARITH_POINTS_FOR_INCORRECT
+        return marks
