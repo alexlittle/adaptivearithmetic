@@ -177,6 +177,7 @@ LOGIN_URL = '/admin/'
 LOGIN_REDIRECT_URL = '/'
 
 
+from config.adaptarith_config import *
 try:
     from config.local_settings import *
 except ImportError:

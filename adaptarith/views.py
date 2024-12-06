@@ -2,12 +2,11 @@ from django.views.generic import TemplateView, FormView
 from django.contrib.auth.views import LogoutView
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect
-
-from django.db.models import Max
+from django.conf import settings
 
 from dqn_model.quiz_engine import Quiz as QuizEngine
 from dqn_model.quiz_engine import Question as QuestionEngine
-import dqn_model.dqn_config as dqncon
+
 from adaptarith.models import Question, KnowledgeLevel
 from adaptarith.forms import AnswerForm
 from adaptarith import utils
@@ -47,6 +46,7 @@ def start_pretest(request):
     request.session['question_ids'] = question_ids
     request.session['current_question_index'] = 0
     return redirect(reverse('adaptarith:pretest_question'))
+
 
 class PreTestQuestionView(FormView):
     template_name = 'adaptarith/pretest.html'
@@ -116,9 +116,10 @@ class PreTestQuestionView(FormView):
         for idx, kl in enumerate(kls):
             know_level = KnowledgeLevel()
             know_level.user = self.request.user
-            know_level.topic = dqncon.TOPICS[idx]
+            know_level.topic = settings.ADAPTARITH_TOPICS[idx]
             know_level.score = kl
             know_level.save()
+
 
 class PreTestCompleteView(TemplateView):
     template_name = 'adaptarith/pretest_complete.html'
@@ -128,15 +129,55 @@ class PreTestCompleteView(TemplateView):
         context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
         return context
 
+
 class RunView(FormView):
     template_name = 'adaptarith/run.html'
     form_class = AnswerForm
 
-    def get_question(self):
-        utils.get_next_question()
+    def get_question(self, knowledge_levels):
+        #generate
+        # TODO
+        next_question = utils.get_next_question(self.request.user, knowledge_levels)
+
+        #save to DB
+        next_q_db = Question()
+        next_q_db.user = self.request.user
+        next_q_db.first_term = next_question.ft
+        next_q_db.second_term = next_question.st
+        next_q_db.level = next_question.level
+        next_q_db.topic = next_question.topic
+        next_q_db.save()
+        # put in session
+        self.request.session['current_question'] = next_q_db.id
+        self.request.session.modified = True
+
+        return next_q_db
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['question'] = utils.format_question(self.get_question())
         context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
+        next_question = self.get_question(context['knowledge_levels'])
+        context['question'] = utils.format_question(next_question)
         return context
+
+    def form_valid(self, form):
+        # get from session
+        question = self.request.session['current_question']
+        question.response = form.cleaned_data['response']
+        question.save()
+
+        # mark and update knowledge level
+        qe = QuestionEngine()
+        qe.ft = question.first_term
+        qe.st = question.second_term
+        qe.level = question.level
+        qe.topic = question.topic
+        qe.set_answer(question.response)
+
+        # TODO
+
+        # if is fully complete move to passed!
+
+        # else redirect to next question
+        return redirect(reverse('adaptarith:run'))
+

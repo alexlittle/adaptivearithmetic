@@ -1,4 +1,4 @@
-import dqn_model.dqn_config as model_cfg
+from django.conf import settings
 import random
 
 
@@ -6,8 +6,8 @@ class Quiz():
 
     def generate_test(self):
         self.questions = []
-        for topic in model_cfg.TOPICS:
-            for level in model_cfg.LEVELS:
+        for topic in settings.ADAPTARITH_TOPICS:
+            for level in settings.ADAPTARITH_LEVELS:
                 q1 = Question()
                 q1.generate_question(topic, level)
                 self.questions.append(q1)
@@ -26,11 +26,11 @@ class Quiz():
 
     def init_knowledge_levels(self):
         # for each topic init users knowledge level
-        # basic "rules" for this - 12 increase in Knowledge level for each correct answer in each level (100/8)
+        # basic "rules" for this - 12 increase in Knowledge level for each correct answer in each level (~100/8)
         knowledge = [0, 0, 0, 0]
         for q in self.questions:
             if q.mark_question():
-                knowledge[model_cfg.TOPICS.index(q.topic)] += model_cfg.INITIAL_KNOWLEDGE_POINTS_PER_QUESTION
+                knowledge[settings.ADAPTARITH_TOPICS.index(q.topic)] += settings.ADAPTARITH_INITIAL_KNOWLEDGE_POINTS_PER_QUESTION
         return knowledge
 
 
@@ -46,7 +46,7 @@ class Question():
         self.topic = topic
         self.level = level
 
-        ranges = model_cfg.RANGES[topic][level]
+        ranges = settings.ADAPTARITH_RANGES[topic][level]
         self.ft = random.choice(ranges['first_term'])
         self.st = random.choice(ranges['second_term'])
 

@@ -1,30 +1,30 @@
-LEVELS = ['easy', 'mod', 'hard', 'vhard']
+ADAPTARITH_LEVELS = ['easy', 'mod', 'hard', 'vhard']
 
-TOPICS = ['add', 'subtract', 'multiply', 'divide']
+ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 
 # knowledge level required for each topic to complete
-PASS_THRESHOLD = 90
+ADAPTARITH_PASS_THRESHOLD = 90
 
 # for the pre-test, how many knowledge points per question (used for setting baseline)
-INITIAL_KNOWLEDGE_POINTS_PER_QUESTION = 10
+ADAPTARITH_INITIAL_KNOWLEDGE_POINTS_PER_QUESTION = 10
 
 # when learning, how many knowledge points for correct/incorrect answer
-POINTS_FOR_CORRECT = 5
-POINTS_FOR_INCORRECT = 0
+ADAPTARITH_POINTS_FOR_CORRECT = 5
+ADAPTARITH_POINTS_FOR_INCORRECT = 0
 
 # maximum increase in knowledge points per question
-MAX_GAIN = 5
+ADAPTARITH_MAX_GAIN = 5
 
-LEVEL_EASY_RANGE = range(0, 25)
-LEVEL_MOD_RANGE = range(25, 50)
-LEVEL_HARD_RANGE = range(50, 75)
-LEVEL_VHARD_RANGE = range(75, 100)
+ADAPTARITH_LEVEL_EASY_RANGE = range(0, 25)
+ADAPTARITH_LEVEL_MOD_RANGE = range(25, 50)
+ADAPTARITH_LEVEL_HARD_RANGE = range(50, 75)
+ADAPTARITH_LEVEL_VHARD_RANGE = range(75, 100)
 
 # max no steps per episode whilst training
-TRAINING_MAX_STEPS = 500
+ADAPTARITH_TRAINING_MAX_STEPS = 500
 
 # define ranges of values per level to be used in the arithmetic
-RANGES = {
+ADAPTARITH_RANGES = {
     'add':
         {'easy': {
             'first_term': range(0, 10),

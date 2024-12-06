@@ -1,5 +1,3 @@
-
-
 import random
 import matplotlib.pyplot as plt
 from collections import namedtuple, deque
@@ -9,39 +7,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from training_simulator import LearnerEnv
-from dqn import DQN
+from dqn_model.training_simulator import LearnerEnv
+from dqn_model.dqn import DQN
 
-
-model_output_filename = "model-dqn.pth"
-
-env = LearnerEnv()
-
-# if GPU is to be used
-device = torch.device(
-    "cuda" if torch.cuda.is_available() else
-    "mps" if torch.backends.mps.is_available() else
-    "cpu"
-)
-
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
-
-
-class ReplayMemory(object):
-
-    def __init__(self, capacity):
-        self.memory = deque([], maxlen=capacity)
-
-    def push(self, *args):
-        """Save a transition"""
-        self.memory.append(Transition(*args))
-
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
+from django.core.management.base import BaseCommand
+from django.utils.translation import gettext_lazy as _
 
 # BATCH_SIZE is the number of transitions sampled from the replay buffer
 # GAMMA is the discount factor as mentioned in the previous section
@@ -58,21 +28,46 @@ EPS_DECAY = 5000
 TAU = 0.005
 LR = 1e-4
 
+steps_done = 0
+
+env = LearnerEnv()
 # Get number of actions from gym action space
 n_actions = env.action_space.n
-# Get the number of state observations
+# if GPU is to be used
 state = env.reset()
 n_observations = len(state)
+episode_durations = []
+
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else
+    "mps" if torch.backends.mps.is_available() else
+    "cpu"
+)
 
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
-
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'next_state', 'reward'))
+
+class ReplayMemory(object):
+
+    def __init__(self, capacity):
+        self.memory = deque([], maxlen=capacity)
+
+    def push(self, *args):
+        """Save a transition"""
+        self.memory.append(Transition(*args))
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
 memory = ReplayMemory(1000000)
-
-
-steps_done = 0
 
 def select_action(state):
     global steps_done
@@ -80,7 +75,7 @@ def select_action(state):
     # linear deacy
     eps_threshold = max(EPS_END, EPS_START - (steps_done / EPS_DECAY) * (EPS_START - EPS_END))
     # exponential decay
-    #eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
+    # eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
@@ -90,10 +85,6 @@ def select_action(state):
             return policy_net(state).max(1).indices.view(1, 1)
     else:
         return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
-
-
-episode_durations = []
-
 
 def plot_durations(show_result=False):
     plt.figure(1)
@@ -111,8 +102,7 @@ def plot_durations(show_result=False):
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
-
-    plt.pause(0.001)  # pause a bit so that plots are updated
+    plt.pause(0.001)
 
 def optimize_model():
     if len(memory) < BATCH_SIZE:
@@ -126,9 +116,9 @@ def optimize_model():
     # Compute a mask of non-final states and concatenate the batch elements
     # (a final state would've been the one after which simulation ended)
     non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=device, dtype=torch.bool)
+                                            batch.next_state)), device=device, dtype=torch.bool)
     non_final_next_states = torch.cat([s for s in batch.next_state
-                                                if s is not None])
+                                       if s is not None])
     state_batch = torch.cat(batch.state)
     action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
@@ -160,53 +150,59 @@ def optimize_model():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
+class Command(BaseCommand):
+    help = _(u"For training DQN model")
+    errors = []
 
-if torch.cuda.is_available() or torch.backends.mps.is_available():
-    num_episodes = 600
-else:
-    num_episodes = 10000
+    def handle(self, *args, **options):
 
-for i_episode in range(num_episodes):
-    # Initialize the environment and get its state
-    state = env.reset()
-    print(f"Episode: {i_episode}")
-    env.render()
-
-    state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-    for t in count():
-        action = select_action(state)
-        observation, reward, done = env.step(action.item())
-        reward = torch.tensor([reward], device=device)
-
-        if done:
-            next_state = None
+        if torch.cuda.is_available() or torch.backends.mps.is_available():
+            num_episodes = 600
         else:
-            next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+            num_episodes = 10
 
-        # Store the transition in memory
-        memory.push(state, action, next_state, reward)
-
-        # Move to the next state
-        state = next_state
-
-        # Perform one step of the optimization (on the policy network)
-        optimize_model()
-
-        # Soft update of the target network's weights
-        # θ′ ← τ θ + (1 −τ )θ′
-        target_net_state_dict = target_net.state_dict()
-        policy_net_state_dict = policy_net.state_dict()
-        for key in policy_net_state_dict:
-            target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
-        target_net.load_state_dict(target_net_state_dict)
-
-        if done:
-            episode_durations.append(t + 1)
+        for i_episode in range(num_episodes):
+            # Initialize the environment and get its state
+            state = env.reset()
+            print(f"Episode: {i_episode}")
             env.render()
 
-            break
-torch.save(policy_net.state_dict(), model_output_filename)
-print('Complete')
-plot_durations(show_result=True)
-plt.savefig('training-results.png', format='png', dpi=300)  # Specify the file name, format, and resolution
-plt.close()
+            state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            for t in count():
+                action = select_action(state)
+                observation, reward, done = env.step(action.item())
+                reward = torch.tensor([reward], device=device)
+
+                if done:
+                    next_state = None
+                else:
+                    next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+
+                # Store the transition in memory
+                memory.push(state, action, next_state, reward)
+
+                # Move to the next state
+                state = next_state
+
+                # Perform one step of the optimization (on the policy network)
+                optimize_model()
+
+                # Soft update of the target network's weights
+                # θ′ ← τ θ + (1 −τ )θ′
+                target_net_state_dict = target_net.state_dict()
+                policy_net_state_dict = policy_net.state_dict()
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (
+                                1 - TAU)
+                target_net.load_state_dict(target_net_state_dict)
+
+                if done:
+                    episode_durations.append(t + 1)
+                    env.render()
+                    break
+
+        torch.save(policy_net.state_dict(), "model_dqn.pth")
+        print('Complete')
+        plot_durations(show_result=True)
+        plt.savefig('training-results.png', format='png', dpi=300)  # Specify the file name, format, and resolution
+        plt.close()

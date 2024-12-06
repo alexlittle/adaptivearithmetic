@@ -20,7 +20,7 @@ class KnowledgeLevel(models.Model):
     topic = models.CharField(max_length=10, blank=False, null=False)
     score = models.IntegerField(default=0)
 
-    @static
+    @staticmethod
     def get_latest_for_user(self, user):
         latest_dates = KnowledgeLevel.objects.filter(user=user).values('topic').annotate(
             latest_date=Max('create_date')

@@ -4,8 +4,8 @@ import numpy as np
 
 from gym import spaces
 
-from config import *
-from quiz_engine import Quiz, Question
+from django.conf import settings
+from dqn_model.quiz_engine import Quiz, Question
 
 
 class LearnerEnv(gym.Env):
@@ -23,10 +23,10 @@ class LearnerEnv(gym.Env):
         self.current_step = 0
 
     def is_done(self):
-        if self.current_step >= TRAINING_MAX_STEPS:
+        if self.current_step >= settings.ADAPTARITH_TRAINING_MAX_STEPS:
             return True
         for i in range(0, len(self.state)):
-            if self.state[i] < PASS_THRESHOLD:
+            if self.state[i] < settings.ADAPTARITH_PASS_THRESHOLD:
                 return False
         return True
 
@@ -34,7 +34,7 @@ class LearnerEnv(gym.Env):
         return [x / 100.0 for x in self.state]
 
     def _normalise_reward(self, reward):
-        return reward / MAX_GAIN
+        return reward / settings.ADAPTARITH_MAX_GAIN
 
     def step(self, action):
         # Decode action into level and topic
@@ -85,7 +85,7 @@ class LearnerEnv(gym.Env):
 
         # get a question for given topic/level
         question = Question()
-        ft, st = question.generate_question(TOPICS[topic], LEVELS[level])
+        ft, st = question.generate_question(settings.ADAPTARITH_TOPICS[topic], settings.ADAPTARITH_LEVELS[level])
 
         # set correct 2/3 of the time
         if ft % 3 != 0:
@@ -93,18 +93,18 @@ class LearnerEnv(gym.Env):
 
         # mark if correct & set the points
         if not question.mark_question():
-            return POINTS_FOR_INCORRECT
+            return settings.ADAPTARITH_POINTS_FOR_INCORRECT
 
-        if self.state[topic] in LEVEL_EASY_RANGE and level == LEVELS.index('easy'):
-            return POINTS_FOR_CORRECT
+        if self.state[topic] in settings.ADAPTARITH_LEVEL_EASY_RANGE and level == settings.ADAPTARITH_LEVELS.index('easy'):
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        if self.state[topic] in LEVEL_MOD_RANGE and level == LEVELS.index('mod'):
-            return POINTS_FOR_CORRECT
+        if self.state[topic] in settings.ADAPTARITH_LEVEL_MOD_RANGE and level == settings.ADAPTARITH_LEVELS.index('mod'):
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        if self.state[topic] in LEVEL_HARD_RANGE and level == LEVELS.index('hard'):
-            return POINTS_FOR_CORRECT
+        if self.state[topic] in settings.ADAPTARITH_LEVEL_HARD_RANGE and level == settings.ADAPTARITH_LEVELS.index('hard'):
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        if self.state[topic] in LEVEL_VHARD_RANGE and level == LEVELS.index('vhard'):
-            return POINTS_FOR_CORRECT
+        if self.state[topic] in settings.ADAPTARITH_LEVEL_VHARD_RANGE and level == settings.ADAPTARITH_LEVELS.index('vhard'):
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        return POINTS_FOR_INCORRECT
+        return settings.ADAPTARITH_POINTS_FOR_INCORRECT
