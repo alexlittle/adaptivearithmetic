@@ -40,14 +40,15 @@ def generate_question(topic, level, pretest=False, training=False, user=None):
 
 def generate_pre_test(training=False, user=None):
     questions = []
-    for topic in settings.ADAPTARITH_TOPICS:
-        for level in settings.ADAPTARITH_LEVELS:
+    for level in settings.ADAPTARITH_LEVELS:
+        level_questions = []
+        for topic in settings.ADAPTARITH_TOPICS:
             q1 = generate_question(topic,level, pretest=True, training=training, user=user)
-            questions.append(q1)
+            level_questions.append(q1)
             q2 = generate_question(topic,level, pretest=True,training=training, user=user)
-            questions.append(q2)
-    # shuffle into random order
-    random.shuffle(questions)
+            level_questions.append(q2)
+        random.shuffle(level_questions)
+        questions = questions + level_questions
     return questions
 
 def get_next_question(user=None,

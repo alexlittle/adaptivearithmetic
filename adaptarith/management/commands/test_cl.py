@@ -19,7 +19,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-
+        model_pth = options['model_pth']
         print("Pre-test")
         print("-----------------")
 
@@ -42,7 +42,8 @@ class Command(BaseCommand):
 
         while True:
             next_question = utils.get_next_question(user=None,
-                                                    knowledge_level=knowledge_level)
+                                                    knowledge_level=knowledge_level,
+                                                    model_pth=model_pth)
 
             question_string = utils.format_question(next_question)
             default = next_question.get_correct_answer()
