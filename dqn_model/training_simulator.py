@@ -69,28 +69,19 @@ class LearnerEnv(gym.Env):
         print(f"Step: {self.current_step}, Knowledge Levels: {self.state}")
 
     def _simulate_pre_test(self):
-        pre_test = utils.generate_pre_test(training=True)
-
-        # add some randomness for the no questions correct
-        q_idx_range = range(0, len(pre_test))
-        num_random_qs = random.randint(0, len(q_idx_range))
-        random_correct_idxes = random.sample(q_idx_range, num_random_qs)
-
-        for idx, q in enumerate(pre_test):
-            if idx in random_correct_idxes:
-                q.response = q.get_correct_answer()
-        kl = KnowledgeLevel()
-        k_levels = kl.pre_test_init_knowledge_level(pre_test)
+        k_levels = [0,0,0,0]
+        # randomly set from 0,5,10,15 ...95
+        k_levels = [random.choice(range(0, 100, 5)) for _ in k_levels]
         return k_levels
 
     def _simulate_learning(self, level_str, topic_str, training=True):
 
         # get a question for given topic/level
-        question = utils.generate_question(topic_str, level_str, pretest=False, training=True)
+        question = utils.generate_question(topic_str, level_str, pretest=False, training=training)
 
         # if the question is in the same level as the user state then mark correct 2/3 of the time
         if question.level == level_str and question.first_term % 3 != 0:
             question.response = question.get_correct_answer()
 
         # mark if correct & set the points
-        return question.mark_question(self.state)
+        return question.mark_question()

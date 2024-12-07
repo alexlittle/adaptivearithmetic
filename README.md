@@ -5,6 +5,8 @@ A prototype site for delivering adaptive arithmetic questions.
 
 It's basically a toy example for me to test and learn about Reinforcement Learning (and other) models.
 
+Using arithmetic for this prototype as straightforward to generate questions within a range of difficulties. 
+
 How it works
 -------------
 

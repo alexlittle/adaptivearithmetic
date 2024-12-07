@@ -53,6 +53,6 @@ class Command(BaseCommand):
             user_input = input(f"{question_string} = ({default})")
 
             next_question.response = user_input if user_input else default
-            score = next_question.mark_question(knowledge_level=knowledge_level)
-            knowledge_level[settings.ADAPTARITH_LEVELS.index(next_question.level)] += score
+            score = next_question.mark_question()
+            knowledge_level[settings.ADAPTARITH_TOPICS.index(next_question.topic)] += score
             print(f"New knowledge level: {knowledge_level}")

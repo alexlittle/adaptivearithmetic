@@ -1,4 +1,4 @@
-import random
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
@@ -26,7 +26,7 @@ class Question(models.Model):
         if self.topic == 'divide':
             return self.first_term / self.second_term
 
-    def mark_question(self, knowledge_level):
+    def mark_question(self):
         if self.topic == 'add' and self.first_term + self.second_term == self.response:
             return settings.ADAPTARITH_POINTS_FOR_CORRECT
         if self.topic == 'subtract' and self.first_term - self.second_term == self.response:
