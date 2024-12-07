@@ -15,6 +15,8 @@ import sys
 
 from django import urls
 
+from config.adaptarith_config import ADAPTARITH_LEVELS
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -176,6 +178,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 LOGIN_URL = '/admin/'
 LOGIN_REDIRECT_URL = '/'
 
+# path to the .pth model state dict to use
+ADAPTARITH_MODEL_PATH = 'dqn_model/model_dqn.pth'
 
 from config.adaptarith_config import *
 try:

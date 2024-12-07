@@ -12,12 +12,3 @@ DATABASES = {
         }
     }
 
-MEDIA_ROOT = "/path/to/coursecrafter/media"
-STATIC_ROOT = "/path/to/coursecrafter/static"
-
-CRAFTER_CHAT_ENGINE = "ollama"  # openai/ollama/google-genai
-CRAFTER_CHAT_ENGINE_MODEL = ""  #
-CRAFTER_EMBEDDING_MODEL = "sentence-transformers/all-mpnet-base-v2"
-
-OPENAI_API_KEY = ""  # required if CRAFTER_CHAT_ENGINE is openai
-GOOGLE_GEN_AI_API_KEY = ""  # required if CRAFTER_CHAT_ENGINE is google-genai

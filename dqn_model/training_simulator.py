@@ -16,8 +16,8 @@ class LearnerEnv(gym.Env):
         # Observation space: 4 continuous values for knowledge levels of 4 topics
         self.observation_space = spaces.Box(low=0, high=100, shape=(3,), dtype=np.float32)
 
-        # Action space: 4 levels × 4 topics = 16 discrete actions
-        self.action_space = spaces.Discrete(16)
+        # Action space: num levels * num topics
+        self.action_space = spaces.Discrete(len(settings.ADAPTARITH_LEVELS) * len(settings.ADAPTARITH_TOPICS))
 
         self.state = self._simulate_pre_test()
         self.current_step = 0
@@ -37,16 +37,16 @@ class LearnerEnv(gym.Env):
         return reward / settings.ADAPTARITH_MAX_GAIN
 
     def step(self, action):
-        # Decode action into level and topic
-        level = action // 4  # 0, 1, 2
-        topic = action % 4  # 0, 1, 2
+        # 'translate' action into level and topic
+        level = action // len(settings.ADAPTARITH_LEVELS)
+        topic = action % len(settings.ADAPTARITH_TOPICS)
 
         # Simulate knowledge gain or loss based on the action
         topic_str = settings.ADAPTARITH_TOPICS[topic]
         level_str = settings.ADAPTARITH_LEVELS[level]
         reward = self._simulate_learning(level_str, topic_str)
 
-        # Update state (simulate a change in knowledge levels)
+        # Update state (a change in knowledge levels)
         self.state[topic] += reward
         self.state[topic] = min(self.state[topic], 100)
         self.state[topic] = max(self.state[topic], 0)
@@ -92,6 +92,5 @@ class LearnerEnv(gym.Env):
         if question.first_term % 3 != 0:
             question.response = question.get_correct_answer()
 
-        marks = question.mark_question(self.state)
         # mark if correct & set the points
-        return marks
+        return question.mark_question(self.state)

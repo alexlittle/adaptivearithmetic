@@ -57,7 +57,7 @@ def get_next_question(user):
     num_observations = len(settings.ADAPTARITH_TOPICS)
     num_actions = num_observations * len(settings.ADAPTARITH_LEVELS)
 
-    state_dict_path = os.path.join(settings.BASE_DIR, 'dqn_model','model_dqn.pth')
+    state_dict_path = os.path.join(settings.BASE_DIR, settings.ADAPTARITH_MODEL_PATH)
 
     model = DQN(n_observations=num_observations, n_actions=num_actions)
     model.load_state_dict(torch.load(state_dict_path, weights_only=True))
@@ -72,8 +72,8 @@ def get_next_question(user):
     action = torch.argmax(q_values, dim=1).item()
 
     # 'translate' action into level & topic
-    level = settings.ADAPTARITH_LEVELS[action // 4]
-    topic = settings.ADAPTARITH_TOPICS[action % 4]
+    level = settings.ADAPTARITH_LEVELS[action // len(settings.ADAPTARITH_LEVELS)]
+    topic = settings.ADAPTARITH_TOPICS[action % len(settings.ADAPTARITH_TOPICS)]
 
     question = generate_question(topic, level, user=user)
     return question
