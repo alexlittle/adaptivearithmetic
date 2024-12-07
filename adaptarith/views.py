@@ -143,7 +143,7 @@ class RunView(FormView):
             kl = KnowledgeLevel()
             kl.user = self.request.user
             kl.topic = question.topic
-            kl.score = latest_score + score
+            kl.score = min(latest_score + score, 100)
             kl.save()
 
         # if is fully complete move to passed!

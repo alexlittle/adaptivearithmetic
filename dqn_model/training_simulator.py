@@ -88,8 +88,8 @@ class LearnerEnv(gym.Env):
         # get a question for given topic/level
         question = utils.generate_question(topic_str, level_str, pretest=False, training=True)
 
-        # set correct 2/3 of the time
-        if question.first_term % 3 != 0:
+        # if the question is in the same level as the user state then mark correct 2/3 of the time
+        if question.level == level_str and question.first_term % 3 != 0:
             question.response = question.get_correct_answer()
 
         # mark if correct & set the points

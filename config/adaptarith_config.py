@@ -6,7 +6,7 @@ ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 Settings for model and simulator whilst training
 '''
 # BATCH_SIZE is the number of transitions sampled from the replay buffer
-ADAPTARITH_TRAINING_BATCH_SIZE = 256
+ADAPTARITH_TRAINING_BATCH_SIZE = 512
 
 # max no steps per episode whilst training
 ADAPTARITH_TRAINING_MAX_STEPS = 150
@@ -29,7 +29,7 @@ ADAPTARITH_TRAINING_TAU = 0.005
 # LR is the learning rate of the ``AdamW`` optimizer
 ADAPTARITH_TRAINING_LR = 1e-4
 
-ADAPTARITH_TRAINING_NUM_EPISODES = 100
+ADAPTARITH_TRAINING_NUM_EPISODES = 150
 
 '''
 Settings for points, difficulty levels etc
