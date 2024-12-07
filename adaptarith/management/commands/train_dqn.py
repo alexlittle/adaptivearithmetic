@@ -1,3 +1,11 @@
+'''
+DQN Model
+
+Adapted from: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+
+'''
+
+
 import random
 import os
 import matplotlib.pyplot as plt
@@ -15,20 +23,6 @@ from dqn_model.dqn import DQN
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
-
-# BATCH_SIZE is the number of transitions sampled from the replay buffer
-# GAMMA is the discount factor as mentioned in the previous section
-# EPS_START is the starting value of epsilon
-# EPS_END is the final value of epsilon
-# EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
-# TAU is the update rate of the target network
-# LR is the learning rate of the ``AdamW`` optimizer
-GAMMA = 0.99
-EPS_START = 1.0
-EPS_END = 0.05
-EPS_DECAY = 5000
-TAU = 0.005
-LR = 1e-4
 
 steps_done = 0
 
@@ -49,7 +43,7 @@ device = torch.device(
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
-optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+optimizer = optim.AdamW(policy_net.parameters(), lr=settings.ADAPTARITH_TRAINING_LR, amsgrad=True)
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -75,9 +69,11 @@ def select_action(state):
     global steps_done
     sample = random.random()
     # linear deacy
-    eps_threshold = max(EPS_END, EPS_START - (steps_done / EPS_DECAY) * (EPS_START - EPS_END))
+    eps_threshold = max(settings.ADAPTARITH_TRAINING_EPS_END,
+                        settings.ADAPTARITH_TRAINING_EPS_START - (steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
+                        * (settings.ADAPTARITH_TRAINING_EPS_START  - settings.ADAPTARITH_TRAINING_EPS_END))
     # exponential decay
-    # eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
+    # eps_threshold = EPS_END + (settings.ADAPTARITH_TRAINING_EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
@@ -138,7 +134,7 @@ def optimize_model(batch_size):
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+    expected_state_action_values = (next_state_values * settings.ADAPTARITH_TRAINING_GAMMA) + reward_batch
 
     # Compute Huber loss
     criterion = nn.SmoothL1Loss()
@@ -162,14 +158,14 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch_size',
             type=int,
-            default=128,
-            help='Size of each batch (default: 128)'
+            default=settings.ADAPTARITH_TRAINING_BATCH_SIZE,
+            help=f'Size of each batch (default: {settings.ADAPTARITH_TRAINING_BATCH_SIZE})'
         )
         parser.add_argument(
             '--num_episodes',
             type=int,
-            default=100,
-            help='Number of episodes to process (default: 100)'
+            default=settings.ADAPTARITH_TRAINING_NUM_EPISODES,
+            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING_NUM_EPISODES})'
         )
         parser.add_argument(
             '--model_output_filename',
@@ -220,8 +216,8 @@ class Command(BaseCommand):
                 target_net_state_dict = target_net.state_dict()
                 policy_net_state_dict = policy_net.state_dict()
                 for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (
-                                1 - TAU)
+                    target_net_state_dict[key] = policy_net_state_dict[key] * settings.ADAPTARITH_TRAINING_TAU + target_net_state_dict[key] * (
+                                1 - settings.ADAPTARITH_TRAINING_TAU)
                 target_net.load_state_dict(target_net_state_dict)
 
                 if done:
