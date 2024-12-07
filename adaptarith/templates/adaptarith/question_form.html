@@ -1,0 +1,17 @@
+{% load i18n %}
+
+
+<form method="post">
+    {% csrf_token %}
+    <span class="question-text">{{ question }} = </span>
+    <input type="number"
+           name="response"
+           step="1"
+           placeholder="?"
+           required
+           id="id_response"
+           class="question-text"
+           autofocus>
+    <br/>
+    <button type="submit">Next</button>
+</form>

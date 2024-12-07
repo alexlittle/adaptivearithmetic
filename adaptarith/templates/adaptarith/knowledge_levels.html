@@ -1,0 +1,8 @@
+{% load i18n %}
+
+
+<ul>
+{% for kl in knowledge_levels %}
+    <li>{{ kl.topic }} {{ kl.score }}</li>
+{% endfor %}
+</ul>

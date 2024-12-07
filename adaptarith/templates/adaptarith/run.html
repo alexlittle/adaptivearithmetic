@@ -8,18 +8,8 @@
 <h1>{% trans 'Your next question....' %}</h1>
 
 
-<p>{{ question }}</p>
+{% include 'adaptarith/question_form.html' %}
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Next</button>
-</form>
-
-<ul>
-{% for kl in knowledge_levels %}
-    <li>{{ kl.topic }} {{ kl.score }}</li>
-{% endfor %}
-</ul>
+{% include 'adaptarith/knowledge_levels.html' %}
 
 {% endblock %}

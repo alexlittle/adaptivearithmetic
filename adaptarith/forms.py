@@ -17,7 +17,6 @@ class UserLoginForm(AuthenticationForm):
 
 class AnswerForm(forms.Form):
     response = forms.IntegerField(
-        widget=forms.NumberInput(attrs={'step': 1}),
-        label="Your Answer",
-        help_text="Enter your answer.",
+        widget=forms.NumberInput(attrs={'step': 1, 'placeholder': '?'}),
+        label="Your Answer"
     )

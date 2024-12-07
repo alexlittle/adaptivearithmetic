@@ -27,8 +27,8 @@ ADAPTARITH_TRAINING_MAX_STEPS = 120
 ADAPTARITH_RANGES = {
     'add':
         {'easy': {
-            'first_term': range(0, 10),
-            'second_term': range(0, 10)
+            'first_term': range(1, 10),
+            'second_term': range(1, 10)
         },
             'mod': {
                 'first_term': range(10, 50),
@@ -45,11 +45,11 @@ ADAPTARITH_RANGES = {
     'subtract':
         {'easy': {
             'first_term': range(5, 10),
-            'second_term': range(0, 5)
+            'second_term': range(1, 5)
         },
             'mod': {
                 'first_term': range(20, 50),
-                'second_term': range(0, 20)
+                'second_term': range(1, 20)
             },
             'hard': {
                 'first_term': range(50, 100),
@@ -61,8 +61,8 @@ ADAPTARITH_RANGES = {
             }},
     'multiply':
         {'easy': {
-            'first_term': range(0, 5),
-            'second_term': range(0, 5)
+            'first_term': range(1, 5),
+            'second_term': range(1, 5)
         },
             'mod': {
                 'first_term': range(5, 10),

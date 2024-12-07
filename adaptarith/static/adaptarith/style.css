@@ -130,7 +130,14 @@ a {
 	color: #04689a;
 }
 
+.question-text {
+    font-size: 200%;
+    font-weight: bold;
+}
 
+input.question-text {
+    width: 80px;
+}
 
 /* RESPONSIVE CSS
 -------------------------------------------------- */
