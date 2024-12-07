@@ -20,6 +20,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         model_pth = options['model_pth']
+        print(f"Using model: {model_pth}")
         print("Pre-test")
         print("-----------------")
 

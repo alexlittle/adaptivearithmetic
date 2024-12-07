@@ -27,31 +27,13 @@ class Question(models.Model):
             return self.first_term / self.second_term
 
     def mark_question(self, knowledge_level):
-        correct = False
         if self.topic == 'add' and self.first_term + self.second_term == self.response:
-            correct = True
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
         if self.topic == 'subtract' and self.first_term - self.second_term == self.response:
-            correct = True
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
         if self.topic == 'multiply' and self.first_term * self.second_term == self.response:
-            correct = True
+            return settings.ADAPTARITH_POINTS_FOR_CORRECT
         if self.topic == 'divide' and self.first_term / self.second_term == self.response:
-            correct = True
-
-        if not correct:
-            return settings.ADAPTARITH_POINTS_FOR_INCORRECT
-
-        kl_for_topic = knowledge_level[settings.ADAPTARITH_TOPICS.index(self.topic)]
-
-        if kl_for_topic in settings.ADAPTARITH_LEVEL_EASY_RANGE and self.level == 'easy':
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if kl_for_topic in settings.ADAPTARITH_LEVEL_MOD_RANGE and self.level == 'mod':
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if kl_for_topic in settings.ADAPTARITH_LEVEL_HARD_RANGE and self.level == 'hard':
-            return settings.ADAPTARITH_POINTS_FOR_CORRECT
-
-        if kl_for_topic in settings.ADAPTARITH_LEVEL_VHARD_RANGE and self.level == 'vhard':
             return settings.ADAPTARITH_POINTS_FOR_CORRECT
 
         return settings.ADAPTARITH_POINTS_FOR_INCORRECT
