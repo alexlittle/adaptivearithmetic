@@ -158,7 +158,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         model_default_filename = f"model_dqn_{timestamp}.pth"
-        grpah_default_filename = f"training_results_{timestamp}.png"
+        graph_default_filename = f"training_results_{timestamp}.png"
         parser.add_argument(
             '--batch_size',
             type=int,
@@ -180,8 +180,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--graph_output_filename',
             type=str,
-            default=grpah_default_filename,
-            help=f'Output filename of graph of results (default: {grpah_default_filename})'
+            default=graph_default_filename,
+            help=f'Output filename of graph of results (default: {graph_default_filename})'
         )
 
     def handle(self, *args, **options):

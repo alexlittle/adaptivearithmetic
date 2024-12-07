@@ -21,7 +21,7 @@ ADAPTARITH_LEVEL_HARD_RANGE = range(50, 75)
 ADAPTARITH_LEVEL_VHARD_RANGE = range(75, 100)
 
 # max no steps per episode whilst training
-ADAPTARITH_TRAINING_MAX_STEPS = 120
+ADAPTARITH_TRAINING_MAX_STEPS = 150
 
 # define ranges of values per level to be used in the arithmetic
 ADAPTARITH_RANGES = {

@@ -113,7 +113,7 @@ class RunView(FormView):
 
     def get_question(self, knowledge_levels):
         #generate
-        next_question = utils.get_next_question(self.request.user)
+        next_question = utils.get_next_question(user=self.request.user)
         # put in session
         self.request.session['current_question'] = next_question.id
         self.request.session.modified = True

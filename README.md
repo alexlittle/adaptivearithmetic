@@ -31,3 +31,12 @@ All the code for configuring and retraining the model(s) is provided.
 See: [Models and training](docs/training.md)
 
 
+Current/Issues Observations
+-----------------------------
+
+
+*7 Dec 2024*
+
+* After pre-test always seems to give division questions
+
+

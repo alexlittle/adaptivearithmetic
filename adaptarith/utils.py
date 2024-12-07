@@ -13,9 +13,9 @@ def format_question(question):
     if question.topic == 'subtract':
         return f"{question.first_term} - {question.second_term}"
     if question.topic == 'multiply':
-        return f"{question.first_term} * {question.second_term}"
+        return f"{question.first_term} × {question.second_term}"
     if question.topic == 'divide':
-        return f"{question.first_term} / {question.second_term}"
+        return f"{question.first_term} ÷ {question.second_term}"
 
 def generate_question(topic, level, pretest=False, training=False, user=None):
     question = Question()
@@ -42,22 +42,25 @@ def generate_pre_test(training=False, user=None):
     questions = []
     for topic in settings.ADAPTARITH_TOPICS:
         for level in settings.ADAPTARITH_LEVELS:
-            q1 = generate_question(topic,level, pretest=True,training=training, user=user)
+            q1 = generate_question(topic,level, pretest=True, training=training, user=user)
             questions.append(q1)
-            #q2 = generate_question(topic,level, pretest=True,training=training, user=user)
-            #questions.append(q2)
+            q2 = generate_question(topic,level, pretest=True,training=training, user=user)
+            questions.append(q2)
     # shuffle into random order
     random.shuffle(questions)
     return questions
 
-def get_next_question(user):
+def get_next_question(user=None,
+                      knowledge_level=None,
+                      model_pth=settings.ADAPTARITH_MODEL_PATH):
 
-    knowledge_level = KnowledgeLevel.get_latest_for_user_as_list(user)
+    if not knowledge_level:
+        knowledge_level = KnowledgeLevel.get_latest_for_user_as_list(user)
 
     num_observations = len(settings.ADAPTARITH_TOPICS)
     num_actions = num_observations * len(settings.ADAPTARITH_LEVELS)
 
-    state_dict_path = os.path.join(settings.BASE_DIR, settings.ADAPTARITH_MODEL_PATH)
+    state_dict_path = os.path.join(settings.BASE_DIR, model_pth)
 
     model = DQN(n_observations=num_observations, n_actions=num_actions)
     model.load_state_dict(torch.load(state_dict_path, weights_only=True))
@@ -75,5 +78,4 @@ def get_next_question(user):
     level = settings.ADAPTARITH_LEVELS[action // len(settings.ADAPTARITH_LEVELS)]
     topic = settings.ADAPTARITH_TOPICS[action % len(settings.ADAPTARITH_TOPICS)]
 
-    question = generate_question(topic, level, user=user)
-    return question
+    return generate_question(topic, level, user=user)
