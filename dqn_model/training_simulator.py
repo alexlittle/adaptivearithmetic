@@ -5,7 +5,6 @@ import numpy as np
 from gym import spaces
 
 from django.conf import settings
-from adaptarith.models import KnowledgeLevel
 from adaptarith import utils
 
 class LearnerEnv(gym.Env):

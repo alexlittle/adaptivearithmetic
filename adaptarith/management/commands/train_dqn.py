@@ -8,6 +8,7 @@ Adapted from: https://pytorch.org/tutorials/intermediate/reinforcement_q_learnin
 
 import random
 import os
+import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -69,11 +70,11 @@ def select_action(state):
     global steps_done
     sample = random.random()
     # linear deacy
-    eps_threshold = max(settings.ADAPTARITH_TRAINING_EPS_END,
-                        settings.ADAPTARITH_TRAINING_EPS_START - (steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
-                        * (settings.ADAPTARITH_TRAINING_EPS_START  - settings.ADAPTARITH_TRAINING_EPS_END))
+    #eps_threshold = max(settings.ADAPTARITH_TRAINING_EPS_END,
+    #                    settings.ADAPTARITH_TRAINING_EPS_START - (steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
+    #                    * (settings.ADAPTARITH_TRAINING_EPS_START  - settings.ADAPTARITH_TRAINING_EPS_END))
     # exponential decay
-    # eps_threshold = EPS_END + (settings.ADAPTARITH_TRAINING_EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
+    eps_threshold = settings.ADAPTARITH_TRAINING_EPS_END + (settings.ADAPTARITH_TRAINING_EPS_START - settings.ADAPTARITH_TRAINING_EPS_END) * math.exp(-1. * steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
