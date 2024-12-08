@@ -11,7 +11,7 @@ import numpy as np
 
 import random
 from torch.optim.lr_scheduler import StepLR
-
+import matplotlib.pyplot as plt
 from collections import deque
 from itertools import count
 from datetime import datetime
@@ -25,7 +25,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 
-
+episode_durations = []
 device = torch.device(
     "cuda" if torch.cuda.is_available() else
     "mps" if torch.backends.mps.is_available() else
@@ -124,8 +124,27 @@ def evaluate(Qmodel, env, repeats):
     return perform/repeats
 
 
+
 def update_parameters(current_model, target_model):
     target_model.load_state_dict(current_model.state_dict())
+
+def plot_durations(show_result=False):
+    plt.figure(1)
+    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    if show_result:
+        plt.title('Result')
+    else:
+        plt.clf()
+        plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(durations_t.numpy())
+    # Take 100 episode averages and plot them too
+    if len(durations_t) >= 100:
+        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+
 
 class Command(BaseCommand):
     help = _(u"For training DDQN model")
@@ -213,15 +232,18 @@ class Command(BaseCommand):
             print(f"Episode: {episode}")
             env.render()
 
-            done = False
-            i = 0
-            while not done:
-                i += 1
+            for t in count():
+
                 action = select_action(Q_2, env, state, eps)
                 state, reward, done, _  = env.step(action)
 
                 # save state, action, reward sequence
                 memory.update(state, action, reward, done)
+
+                if done:
+                    episode_durations.append(t + 1)
+                    env.render()
+                    break
 
             if episode >= min_episodes and episode % update_step == 0:
                 for _ in range(update_repeats):
@@ -234,7 +256,6 @@ class Command(BaseCommand):
             scheduler.step()
             eps = max(eps * eps_decay, eps_min)
 
-            env.render()
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_dir = os.path.join(settings.BASE_DIR, 'ddqn_model', 'results', timestamp)
@@ -244,3 +265,7 @@ class Command(BaseCommand):
         graph_output_file = os.path.join(output_dir, graph_output_filename)
 
         torch.save(Q_1.state_dict(), model_output_path)
+        print('Complete')
+        plot_durations(show_result=True)
+        plt.savefig(graph_output_file, format='png', dpi=300)  # Specify the file name, format, and resolution
+        plt.close()
