@@ -18,7 +18,7 @@ from collections import namedtuple, deque
 from itertools import count
 from datetime import datetime
 
-from dqn_model.training_simulator import LearnerEnv
+from adaptarith.training_simulator import LearnerEnv
 from dqn_model.dqn import DQN
 
 from django.conf import settings
@@ -153,9 +153,9 @@ class Command(BaseCommand):
     errors = []
 
     def add_arguments(self, parser):
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        model_default_filename = f"model_dqn_{timestamp}.pth"
-        graph_default_filename = f"training_results_{timestamp}.png"
+
+        model_default_filename = f"model_dqn.pth"
+        graph_default_filename = f"training_results.png"
         parser.add_argument(
             '--batch_size',
             type=int,
@@ -195,7 +195,7 @@ class Command(BaseCommand):
             state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             for t in count():
                 action = select_action(state)
-                observation, reward, done = env.step(action.item())
+                observation, reward, done, _  = env.step(action.item())
                 reward = torch.tensor([reward], device=device)
 
                 if done:
@@ -226,9 +226,15 @@ class Command(BaseCommand):
                     env.render()
                     break
 
-        model_output_file = os.path.join(settings.BASE_DIR, 'output', model_output_filename)
-        graph_output_file = os.path.join(settings.BASE_DIR, 'output', graph_output_filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', timestamp)
+        os.makedirs(output_dir, exist_ok=True)
+
+        model_output_file = os.path.join(output_dir, model_output_filename)
+        graph_output_file = os.path.join(output_dir, graph_output_filename)
+
         torch.save(policy_net.state_dict(), model_output_file)
+
         print('Complete')
         plot_durations(show_result=True)
         plt.savefig(graph_output_file, format='png', dpi=300)  # Specify the file name, format, and resolution

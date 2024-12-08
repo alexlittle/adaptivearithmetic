@@ -56,7 +56,7 @@ class LearnerEnv(gym.Env):
         done = self.is_done()
 
         # Return updated state, reward, done
-        return self._normalise_state(), self._normalise_reward(reward), done
+        return self._normalise_state(), self._normalise_reward(reward), done, {}
 
     def reset(self):
         # Reset state and step counter
