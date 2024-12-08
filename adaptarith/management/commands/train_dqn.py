@@ -44,7 +44,7 @@ device = torch.device(
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
-optimizer = optim.AdamW(policy_net.parameters(), lr=settings.ADAPTARITH_TRAINING_LR, amsgrad=True)
+optimizer = optim.AdamW(policy_net.parameters(), lr=settings.ADAPTARITH_TRAINING['lr'], amsgrad=True)
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -69,12 +69,17 @@ memory = ReplayMemory(1000000)
 def select_action(state):
     global steps_done
     sample = random.random()
-    # linear deacy
-    #eps_threshold = max(settings.ADAPTARITH_TRAINING_EPS_END,
-    #                    settings.ADAPTARITH_TRAINING_EPS_START - (steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
-    #                    * (settings.ADAPTARITH_TRAINING_EPS_START  - settings.ADAPTARITH_TRAINING_EPS_END))
+    # linear decay
+    #eps_threshold = max(settings.ADAPTARITH_TRAINING['eps_end'] ,
+    #                    settings.ADAPTARITH_TRAINING['eps_start']
+    #                    - (steps_done / settings.ADAPTARITH_TRAINING['eps_decay'])
+    #                    * (settings.ADAPTARITH_TRAINING['eps_start']
+    #                    - settings.ADAPTARITH_TRAINING['eps_end'] ))
     # exponential decay
-    eps_threshold = settings.ADAPTARITH_TRAINING_EPS_END + (settings.ADAPTARITH_TRAINING_EPS_START - settings.ADAPTARITH_TRAINING_EPS_END) * math.exp(-1. * steps_done / settings.ADAPTARITH_TRAINING_EPS_DECAY)
+    eps_threshold = settings.ADAPTARITH_TRAINING['eps_end'] \
+                    + (settings.ADAPTARITH_TRAINING['eps_start']
+                       - settings.ADAPTARITH_TRAINING['eps_end'] ) \
+                    * math.exp(-1. * steps_done / settings.ADAPTARITH_TRAINING['eps_decay'])
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
@@ -135,7 +140,7 @@ def optimize_model(batch_size):
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * settings.ADAPTARITH_TRAINING_GAMMA) + reward_batch
+    expected_state_action_values = (next_state_values * settings.ADAPTARITH_TRAINING['gamma']) + reward_batch
 
     # Compute Huber loss
     criterion = nn.SmoothL1Loss()
@@ -159,14 +164,14 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch_size',
             type=int,
-            default=settings.ADAPTARITH_TRAINING_BATCH_SIZE,
-            help=f'Size of each batch (default: {settings.ADAPTARITH_TRAINING_BATCH_SIZE})'
+            default=settings.ADAPTARITH_TRAINING['batch_size'],
+            help=f"Size of each batch (default: {settings.ADAPTARITH_TRAINING['batch_size']})"
         )
         parser.add_argument(
             '--num_episodes',
             type=int,
-            default=settings.ADAPTARITH_TRAINING_NUM_EPISODES,
-            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING_NUM_EPISODES})'
+            default=settings.ADAPTARITH_TRAINING['num_episodes'],
+            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING['num_episodes']})'
         )
         parser.add_argument(
             '--model_output_filename',
@@ -217,8 +222,9 @@ class Command(BaseCommand):
                 target_net_state_dict = target_net.state_dict()
                 policy_net_state_dict = policy_net.state_dict()
                 for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key] * settings.ADAPTARITH_TRAINING_TAU + target_net_state_dict[key] * (
-                                1 - settings.ADAPTARITH_TRAINING_TAU)
+                    target_net_state_dict[key] = policy_net_state_dict[key] \
+                                                 * settings.ADAPTARITH_TRAINING['tau'] + target_net_state_dict[key] * (
+                                                 1 - settings.ADAPTARITH_TRAINING['tau'])
                 target_net.load_state_dict(target_net_state_dict)
 
                 if done:

@@ -157,14 +157,14 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch_size',
             type=int,
-            default=settings.ADAPTARITH_TRAINING_BATCH_SIZE,
-            help=f'Size of each batch (default: {settings.ADAPTARITH_TRAINING_BATCH_SIZE})'
+            default=settings.ADAPTARITH_TRAINING['batch_size'],
+            help=f"Size of each batch (default: {settings.ADAPTARITH_TRAINING['batch_size']})"
         )
         parser.add_argument(
             '--num_episodes',
             type=int,
-            default=settings.ADAPTARITH_TRAINING_NUM_EPISODES,
-            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING_NUM_EPISODES})'
+            default=settings.ADAPTARITH_TRAINING['num_episodes'],
+            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING['num_episodes']})'
         )
         parser.add_argument(
             '--model_output_filename',
@@ -212,21 +212,13 @@ class Command(BaseCommand):
         for param in Q_2.parameters():
             param.requires_grad = False
 
-        optimizer = torch.optim.Adam(Q_1.parameters(), lr=settings.ADAPTARITH_TRAINING_LR)
+        optimizer = torch.optim.Adam(Q_1.parameters(), lr=settings.ADAPTARITH_TRAINING['lr'])
         scheduler = StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
 
         memory = Memory(1000000)
         performance = []
 
         for episode in range(num_episodes):
-            # display the performance
-            if (episode % measure_step == 0) and episode >= min_episodes:
-                performance.append([episode, evaluate(Q_1, env, measure_repeats)])
-                print("Episode: ", episode)
-                print("rewards: ", performance[-1][1])
-                print("lr: ", scheduler.get_last_lr()[0])
-                print("eps: ", eps)
-
             state = env.reset()
             memory.state.append(state)
             print(f"Episode: {episode}")
@@ -255,6 +247,14 @@ class Command(BaseCommand):
             # update learning rate and eps
             scheduler.step()
             eps = max(eps * eps_decay, eps_min)
+
+            # display the performance
+            if (episode % measure_step == 0) and episode >= min_episodes:
+                performance.append([episode, evaluate(Q_1, env, measure_repeats)])
+                print("Episode: ", episode)
+                print("rewards: ", performance[-1][1])
+                print("lr: ", scheduler.get_last_lr()[0])
+                print("eps: ", eps)
 
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')

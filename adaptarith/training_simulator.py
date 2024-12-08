@@ -22,7 +22,7 @@ class LearnerEnv(gym.Env):
         self.current_step = 0
 
     def is_done(self):
-        if self.current_step >= settings.ADAPTARITH_TRAINING_MAX_STEPS:
+        if self.current_step >= settings.ADAPTARITH_TRAINING['max_steps']:
             return True
         for i in range(0, len(self.state)):
             if self.state[i] < settings.ADAPTARITH_PASS_THRESHOLD:

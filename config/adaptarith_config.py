@@ -5,32 +5,18 @@ ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 '''
 Settings for model and simulator whilst training
 '''
-# BATCH_SIZE is the number of transitions sampled from the replay buffer
-ADAPTARITH_TRAINING_BATCH_SIZE = 256
+ADAPTARITH_TRAINING = {
+    'num_episodes': 100, # number of simulator episodes to run when training
+    'batch_size': 256, # BATCH_SIZE is the number of transitions sampled from the replay buffer
+    'max_steps': 400, # max no steps per episode whilst training
+    'gamma': 0.99, # GAMMA is the discount factor
+    'eps_start': 1.0, # EPS_START is the starting value of epsilon
+    'eps_end': 0.05, # EPS_END is the final value of epsilon
+    'eps_decay': 5000, # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
+    'tau': 0.005, # TAU is the update rate of the target network
+    'lr': 1e-4, # LR is the learning rate of the ``AdamW`` optimizer
+}
 
-# max no steps per episode whilst training
-ADAPTARITH_TRAINING_MAX_STEPS = 200
-
-# GAMMA is the discount factor
-ADAPTARITH_TRAINING_GAMMA = 0.99
-
-# EPS_START is the starting value of epsilon
-ADAPTARITH_TRAINING_EPS_START = 1.0
-
-# EPS_END is the final value of epsilon
-ADAPTARITH_TRAINING_EPS_END = 0.05
-
-# EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
-ADAPTARITH_TRAINING_EPS_DECAY = 5000
-
-# TAU is the update rate of the target network
-ADAPTARITH_TRAINING_TAU = 0.005
-
-# LR is the learning rate of the ``AdamW`` optimizer
-ADAPTARITH_TRAINING_LR = 1e-4
-
-# number of simulator episodes to run when training
-ADAPTARITH_TRAINING_NUM_EPISODES = 100
 
 '''
 Settings for points, difficulty levels etc
