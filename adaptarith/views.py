@@ -112,13 +112,16 @@ class RunView(FormView):
     form_class = AnswerForm
 
     def get_question(self, knowledge_levels):
-        #generate
-        next_question = utils.get_next_question(user=self.request.user)
-        # put in session
-        self.request.session['current_question'] = next_question.id
+
+        q_id = self.request.session['current_question']
+        if not q_id:
+            #generate
+            q_id = utils.get_next_question(user=self.request.user)
+
+        self.request.session['current_question'] = q_id
         self.request.session.modified = True
 
-        return next_question
+        return q_id
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -146,8 +149,18 @@ class RunView(FormView):
             kl.score = min(latest_score + score, 100)
             kl.save()
 
+        # remove current question for session
+        self.request.session.pop('current_question', None)
         # if is fully complete move to passed!
-
+        if KnowledgeLevel.get_latest_for_user(self.request.user):
+            return redirect(reverse('adaptarith:passed'))
         # else redirect to next question
         return redirect(reverse('adaptarith:run'))
 
+class PassedView(TemplateView):
+    template_name = 'adaptarith/passed.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
+        return context

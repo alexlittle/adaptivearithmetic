@@ -45,6 +45,14 @@ class KnowledgeLevel(models.Model):
     score = models.IntegerField(default=0)
 
     @staticmethod
+    def has_passed(user):
+        kls = KnowledgeLevel.get_latest_for_user(user)
+        for k in kls:
+            if k.score < settings.ADAPTARITH_PASS_THRESHOLD:
+                return False
+        return True
+
+    @staticmethod
     def get_latest_for_topic(user, topic):
         try:
             latest_kl = KnowledgeLevel.objects.filter(user=user, topic=topic).latest('create_date')
@@ -68,14 +76,14 @@ class KnowledgeLevel(models.Model):
     @staticmethod
     def get_latest_for_user_as_list(user):
         as_query = KnowledgeLevel.get_latest_for_user(user)
-        knowledge = [0, 0, 0, 0]
+        knowledge = [0 for _ in settings.ADAPTARITH_TOPICS]
         for i in as_query:
             knowledge[settings.ADAPTARITH_TOPICS.index(i.topic)] = i.score
         return knowledge
 
     @staticmethod
     def pre_test_init_knowledge_level(questions):
-        knowledge = [0, 0, 0, 0]
+        knowledge = [0 for _ in settings.ADAPTARITH_TOPICS]
         for q in questions:
             if q.response == q.get_correct_answer():
                 knowledge[settings.ADAPTARITH_TOPICS.index(

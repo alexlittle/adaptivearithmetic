@@ -16,5 +16,6 @@ urlpatterns = [
     path('pretest/complete/', views.PreTestCompleteView.as_view(), name='pretest_complete'),
 
     path('run/', views.RunView.as_view(), name='run'),
+    path('passed/', views.PassedView.as_view(), name='passed'),
 
 ]

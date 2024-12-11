@@ -63,12 +63,15 @@ def get_next_question(user=None,
 
     state_dict_path = os.path.join(settings.BASE_DIR, model_pth)
 
-    model = DQN(n_observations=num_observations, n_actions=num_actions)
-    model.load_state_dict(torch.load(state_dict_path, weights_only=True))
+    model = DQN(n_observations=num_observations,
+                n_actions=num_actions,
+                hidden_dims=settings.ADAPTARITH_TRAINING['hidden_dims'])
+    model.load_state_dict(torch.load(state_dict_path, weights_only=False))
     model.eval()
 
+    print(knowledge_level)
     state_tensor = torch.tensor(knowledge_level, dtype=torch.float32).unsqueeze(0)
-
+    print(state_tensor)
     with torch.no_grad():  # Disable gradient calculation since we are only inferring
         q_values = model(state_tensor)  # Get Q-values from the model
 
@@ -76,7 +79,10 @@ def get_next_question(user=None,
     action = torch.argmax(q_values, dim=1).item()
 
     # 'translate' action into level & topic
-    level = settings.ADAPTARITH_LEVELS[action // len(settings.ADAPTARITH_LEVELS)]
+    level = settings.ADAPTARITH_LEVELS[action // len(settings.ADAPTARITH_TOPICS)]
     topic = settings.ADAPTARITH_TOPICS[action % len(settings.ADAPTARITH_TOPICS)]
+    print("")
+    print("Q-values:", q_values.numpy())
+    print(f"Action: {action},  Level: {level}, Topic: {topic}")
 
     return generate_question(topic, level, user=user)

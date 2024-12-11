@@ -5,9 +5,8 @@
 
 {% block content %}
 
-<h1>{% trans 'Pre Test Complete!' %}</h1>
+<h1>{% trans 'Passed!' %}</h1>
 
 {% include 'adaptarith/knowledge_levels.html' %}
 
-<a href="{% url 'adaptarith:run' %}">{% trans 'Start improving your knowledge levels!' %}</a>
 {% endblock %}

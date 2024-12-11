@@ -5,7 +5,8 @@ Adapted from: https://pytorch.org/tutorials/intermediate/reinforcement_q_learnin
 
 '''
 
-
+import time
+import json
 import random
 import os
 import math
@@ -25,15 +26,18 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
 
+dqn_config = settings.ADAPTARITH_TRAINING
+
 steps_done = 0
 
 env = LearnerEnv()
 # Get number of actions from gym action space
 n_actions = env.action_space.n
-# if GPU is to be used
 state = env.reset()
 n_observations = len(state)
+
 episode_durations = []
+episode_rewards = []
 
 device = torch.device(
     "cuda" if torch.cuda.is_available() else
@@ -41,10 +45,10 @@ device = torch.device(
     "cpu"
 )
 
-policy_net = DQN(n_observations, n_actions).to(device)
-target_net = DQN(n_observations, n_actions).to(device)
+policy_net = DQN(n_observations, n_actions, settings.ADAPTARITH_TRAINING['hidden_dims']).to(device)
+target_net = DQN(n_observations, n_actions, settings.ADAPTARITH_TRAINING['hidden_dims']).to(device)
 target_net.load_state_dict(policy_net.state_dict())
-optimizer = optim.AdamW(policy_net.parameters(), lr=settings.ADAPTARITH_TRAINING['lr'], amsgrad=True)
+optimizer = optim.AdamW(policy_net.parameters(), lr=dqn_config['lr'], amsgrad=True)
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -64,22 +68,22 @@ class ReplayMemory(object):
     def __len__(self):
         return len(self.memory)
 
-memory = ReplayMemory(1000000)
+memory = ReplayMemory(dqn_config['replay_memory'] )
 
 def select_action(state):
     global steps_done
     sample = random.random()
     # linear decay
-    #eps_threshold = max(settings.ADAPTARITH_TRAINING['eps_end'] ,
-    #                    settings.ADAPTARITH_TRAINING['eps_start']
-    #                    - (steps_done / settings.ADAPTARITH_TRAINING['eps_decay'])
-    #                    * (settings.ADAPTARITH_TRAINING['eps_start']
-    #                    - settings.ADAPTARITH_TRAINING['eps_end'] ))
+    eps_threshold = max(dqn_config['eps_end'] ,
+                        dqn_config['eps_start']
+                        - (steps_done / dqn_config['eps_decay'])
+                        * (dqn_config['eps_start']
+                        - dqn_config['eps_end'] ))
     # exponential decay
-    eps_threshold = settings.ADAPTARITH_TRAINING['eps_end'] \
-                    + (settings.ADAPTARITH_TRAINING['eps_start']
-                       - settings.ADAPTARITH_TRAINING['eps_end'] ) \
-                    * math.exp(-1. * steps_done / settings.ADAPTARITH_TRAINING['eps_decay'])
+    #eps_threshold = dqn_config['eps_end'] \
+    #                + (dqn_config['eps_start']
+    #                   - dqn_config['eps_end'] ) \
+    #                * math.exp(-1. * steps_done / dqn_config['eps_decay'])
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
@@ -90,7 +94,28 @@ def select_action(state):
     else:
         return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
 
-def plot_durations(show_result=False):
+
+def plot_rewards(show_result=False, save_path=None):
+    plt.figure(2)
+    rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
+    if show_result:
+        plt.title('Result')
+    else:
+        plt.clf()
+        plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Rewards')
+    plt.plot(rewards_t.numpy())
+    # Take 100 episode averages and plot them too
+    if len(rewards_t) >= 100:
+        means = rewards_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+
+    if save_path:
+        plt.savefig(save_path, format='png', dpi=300)
+
+def plot_durations(show_result=False, save_path=None):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
     if show_result:
@@ -106,6 +131,9 @@ def plot_durations(show_result=False):
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
+
+    if save_path:
+        plt.savefig(save_path, format='png', dpi=300)
 
 def optimize_model(batch_size):
     if len(memory) < batch_size:
@@ -140,7 +168,7 @@ def optimize_model(batch_size):
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * settings.ADAPTARITH_TRAINING['gamma']) + reward_batch
+    expected_state_action_values = (next_state_values * dqn_config['gamma']) + reward_batch
 
     # Compute Huber loss
     criterion = nn.SmoothL1Loss()
@@ -158,51 +186,35 @@ class Command(BaseCommand):
     errors = []
 
     def add_arguments(self, parser):
-
-        model_default_filename = f"model_dqn.pth"
-        graph_default_filename = f"training_results.png"
         parser.add_argument(
             '--batch_size',
             type=int,
-            default=settings.ADAPTARITH_TRAINING['batch_size'],
-            help=f"Size of each batch (default: {settings.ADAPTARITH_TRAINING['batch_size']})"
+            default=dqn_config['batch_size'],
+            help=f"Size of each batch (default: {dqn_config['batch_size']})"
         )
         parser.add_argument(
             '--num_episodes',
             type=int,
-            default=settings.ADAPTARITH_TRAINING['num_episodes'],
-            help=f'Number of episodes to process (default: {settings.ADAPTARITH_TRAINING['num_episodes']})'
-        )
-        parser.add_argument(
-            '--model_output_filename',
-            type=str,
-            default=model_default_filename,
-            help=f'Output filename of model (default: {model_default_filename})'
-        )
-        parser.add_argument(
-            '--graph_output_filename',
-            type=str,
-            default=graph_default_filename,
-            help=f'Output filename of graph of results (default: {graph_default_filename})'
+            default=dqn_config['num_episodes'],
+            help=f"Number of episodes to process (default: {dqn_config['num_episodes']})"
         )
 
     def handle(self, *args, **options):
-        batch_size = options['batch_size']
-        num_episodes = options['num_episodes']
-        model_output_filename = options['model_output_filename']
-        graph_output_filename = options['graph_output_filename']
-        for i_episode in range(num_episodes):
+        dqn_config['batch_size'] = options['batch_size']
+        dqn_config['num_episodes'] = options['num_episodes']
+        start_time = time.time()
+        for i_episode in range(dqn_config['num_episodes']):
             # Initialize the environment and get its state
             state = env.reset()
             print(f"Episode: {i_episode}")
             env.render()
-
+            total_reward = 0
             state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             for t in count():
                 action = select_action(state)
                 observation, reward, done, _  = env.step(action.item())
                 reward = torch.tensor([reward], device=device)
-
+                total_reward += reward
                 if done:
                     next_state = None
                 else:
@@ -215,7 +227,7 @@ class Command(BaseCommand):
                 state = next_state
 
                 # Perform one step of the optimization (on the policy network)
-                optimize_model(batch_size)
+                optimize_model(dqn_config['batch_size'])
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -223,25 +235,35 @@ class Command(BaseCommand):
                 policy_net_state_dict = policy_net.state_dict()
                 for key in policy_net_state_dict:
                     target_net_state_dict[key] = policy_net_state_dict[key] \
-                                                 * settings.ADAPTARITH_TRAINING['tau'] + target_net_state_dict[key] * (
-                                                 1 - settings.ADAPTARITH_TRAINING['tau'])
+                                                 * dqn_config['tau'] + target_net_state_dict[key] * (
+                                                 1 - dqn_config['tau'])
                 target_net.load_state_dict(target_net_state_dict)
 
                 if done:
                     episode_durations.append(t + 1)
+                    episode_rewards.append(total_reward)
                     env.render()
                     break
+        print('Complete')
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Total runtime: {elapsed_time:.2f} seconds")
+        dqn_config['runtime'] = elapsed_time
+        # write pth, graphs and config
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         output_dir = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', timestamp)
         os.makedirs(output_dir, exist_ok=True)
 
-        model_output_file = os.path.join(output_dir, model_output_filename)
-        graph_output_file = os.path.join(output_dir, graph_output_filename)
+        model_output_file = os.path.join(output_dir, "model.pth")
+        durations_file = os.path.join(output_dir, "results-durations.png")
+        rewards_file = os.path.join(output_dir, "results-rewards.png")
+        config_output_file = os.path.join(output_dir, "config.json")
 
         torch.save(policy_net.state_dict(), model_output_file)
 
-        print('Complete')
-        plot_durations(show_result=True)
-        plt.savefig(graph_output_file, format='png', dpi=300)  # Specify the file name, format, and resolution
-        plt.close()
+        with open(config_output_file, "w") as file:
+            json.dump(dqn_config, file, indent=4)
+
+        plot_durations(show_result=True, save_path=durations_file)
+        plot_rewards(show_result=True, save_path=rewards_file)

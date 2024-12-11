@@ -1,20 +1,28 @@
+
+'''
+Settings for levels and topics available
+'''
+
 ADAPTARITH_LEVELS = ['easy', 'mod', 'hard', 'vhard']
 
-ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
+ADAPTARITH_TOPICS = ['add']
+#ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 
 '''
 Settings for model and simulator whilst training
 '''
 ADAPTARITH_TRAINING = {
-    'num_episodes': 100, # number of simulator episodes to run when training
-    'batch_size': 256, # BATCH_SIZE is the number of transitions sampled from the replay buffer
-    'max_steps': 400, # max no steps per episode whilst training
+    'hidden_dims': 128, # how many nodes in each hidden layer of NN
+    'num_episodes': 300, # number of simulator episodes to run when training
+    'batch_size': 64, # BATCH_SIZE is the number of transitions sampled from the replay buffer
+    'max_steps': 80, # max no steps per episode whilst training
     'gamma': 0.99, # GAMMA is the discount factor
     'eps_start': 1.0, # EPS_START is the starting value of epsilon
     'eps_end': 0.05, # EPS_END is the final value of epsilon
     'eps_decay': 5000, # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
     'tau': 0.005, # TAU is the update rate of the target network
     'lr': 1e-4, # LR is the learning rate of the ``AdamW`` optimizer
+    'replay_memory': 1000000,
 }
 
 
@@ -22,7 +30,7 @@ ADAPTARITH_TRAINING = {
 Settings for points, difficulty levels etc
 '''
 # knowledge level required for each topic to complete
-ADAPTARITH_PASS_THRESHOLD = 90
+ADAPTARITH_PASS_THRESHOLD = 100
 
 # for the pre-test, how many knowledge points per question (used for setting baseline)
 ADAPTARITH_INITIAL_KNOWLEDGE_POINTS_PER_QUESTION = 10
@@ -34,10 +42,10 @@ ADAPTARITH_POINTS_FOR_INCORRECT = 0
 # maximum increase in knowledge points per question
 ADAPTARITH_MAX_GAIN = 5
 
-ADAPTARITH_LEVEL_EASY_RANGE = range(0, 25)
-ADAPTARITH_LEVEL_MOD_RANGE = range(25, 50)
-ADAPTARITH_LEVEL_HARD_RANGE = range(50, 75)
-ADAPTARITH_LEVEL_VHARD_RANGE = range(75, 100)
+ADAPTARITH_LEVEL_EASY_RANGE = {'lower': 0, 'upper': 25}
+ADAPTARITH_LEVEL_MOD_RANGE = {'lower': 25, 'upper': 50}
+ADAPTARITH_LEVEL_HARD_RANGE = {'lower': 50, 'upper': 75}
+ADAPTARITH_LEVEL_VHARD_RANGE = {'lower': 75, 'upper': 100}
 
 # define ranges of values per level to be used in the arithmetic
 ADAPTARITH_RANGES = {

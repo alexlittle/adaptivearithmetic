@@ -164,3 +164,4 @@ cython_debug/
 /output/
 /dqn_model/results/
 /ddqn_model/results/
+/rnn_dqn_model/results/
