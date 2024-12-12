@@ -10,16 +10,15 @@ import os
 import time
 import torch
 import numpy as np
-
+import torch.nn as nn
 import random
-from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 from collections import deque
 from itertools import count
 from datetime import datetime
-
+import torch.optim as optim
 from adaptarith.training_simulator import LearnerEnv
-from rnn_dqn_model.rnn_dqn import RNNQNetwork
+from rnn_dqn_model.rnn_dqn import LSTM_DQN
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -41,121 +40,140 @@ device = torch.device(
 """
 memory to save the state, action, reward sequence from the current episode. 
 """
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.buffer = []
+        self.position = 0
 
-
-class Memory:
-    def __init__(self, len, sequence_length):
-        self.sequence_length = sequence_length
-        self.rewards = deque(maxlen=len)
-        self.states = deque(maxlen=len)
-        self.actions = deque(maxlen=len)
-        self.is_done = deque(maxlen=len)
-
-    def update(self, state, action, reward, done):
-        self.states.append(state)
-        self.actions.append(action)
-        self.rewards.append(reward)
-        self.is_done.append(done)
+    def push(self, state, action, next_state, reward, done):
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(None)
+        self.buffer[self.position] = (state, action, next_state, reward, done)
+        self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        idx = random.sample(range(self.sequence_length, len(self.is_done) - 1), batch_size)
+        return random.sample(self.buffer, batch_size)
 
-        # Convert deque to list for slicing
-        states_list = list(self.states)
-
-        sequences = [states_list[i - self.sequence_length:i] for i in idx]
-
-        actions = np.array(self.actions)
-        rewards = np.array(self.rewards)
-        dones = np.array(self.is_done)
-
-        return (
-            torch.Tensor(sequences).to(device),
-            torch.LongTensor(actions[idx]).to(device),
-            torch.Tensor(sequences).to(device),
-            torch.Tensor(rewards[idx]).to(device),
-            torch.Tensor(dones[idx]).to(device),
-        )
-
-    def reset(self):
-        self.rewards.clear()
-        self.states.clear()
-        self.actions.clear()
-        self.is_done.clear()
-
-def select_action(model, env, state, eps, hidden_state=None):
-    state = torch.Tensor(state).to(device)
-    with torch.no_grad():
-        values = model(state.unsqueeze(0))  # Unsqueeze for RNN to add batch dimension
-
-    if random.random() <= eps:
-        action = np.random.randint(0, env.action_space.n)  # Select a random action
-    else:
-        q_values = values[0]
-        action = np.argmax(q_values.cpu().numpy())  # Choose the action with the highest Q-value
-
-    return action
+    def __len__(self):
+        return len(self.buffer)
 
 
-def train(batch_size, model, optimizer, memory, gamma):
-    states, actions, next_states, rewards, is_done = memory.sample(batch_size)
+class DQNAgent:
+    def __init__(self, input_size, hidden_size, output_size, device, batch_size=32, gamma=0.99, lr=1e-3, capacity=100000):
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.policy_net = LSTM_DQN(input_size, hidden_size, output_size)
+        self.target_net = LSTM_DQN(input_size, hidden_size, output_size)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.replay_buffer = ReplayBuffer(capacity)
+        self.steps_done = 0
+        self.device = device
+        self.policy_net.to(self.device)
+        self.target_net.to(self.device)
 
-    # Compute Q-values for the current states
-    q_values = model(states)
-    q_values_tensor = q_values[0]  # Adjust based on your model's output
+    def select_action(self, state, epsilon=0.1):
+        if random.random() < epsilon:
+            return random.choice(range(self.policy_net.output_size))
+        else:
+            state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+            q_values, _ = self.policy_net(state)
+            if q_values.dim() == 1:
+                q_values = q_values.unsqueeze(0)
+            return torch.argmax(q_values, dim=1).item()
 
-    # Get Q-values for next states
-    next_q_values = model(next_states)
-    next_q_values_tensor = next_q_values[0]  # Adjust based on your model's output
+    def optimize_model(self, hidden_state):
+        seq_len = 10
+        if len(self.replay_buffer) < self.batch_size:
+            return
 
-    # Compute the max Q-values for the next states
-    max_next_q_values = torch.max(next_q_values_tensor, dim=1)[0]
+        # Sample a batch of transitions
+        batch = self.replay_buffer.sample(self.batch_size)
 
-    # Compute target Q-values
-    target_q_values = rewards + gamma * max_next_q_values * (1 - is_done)
+        # Prepare the batch
+        states, actions, next_states, rewards, dones = zip(*batch)
 
-    # Get the Q-values corresponding to the actions taken
-    q_value = q_values_tensor.gather(1, actions.unsqueeze(1)).squeeze(1)
+        # Convert to tensors
 
-    # Compute the loss
-    loss = (q_value - target_q_values.detach()).pow(2).mean()
+        states = torch.tensor(states, dtype=torch.float32).to(self.device)
+        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+        actions = torch.tensor(actions, dtype=torch.long).to(self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        dones = torch.tensor(dones, dtype=torch.uint8).to(self.device)
 
-    # Optimize the model
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+        states = states.unsqueeze(-1)
 
-def evaluate(Qmodel, env, repeats):
-    """
-    Runs a greedy policy with respect to the current Q-Network for "repeats" many episodes. Returns the average
-    episode reward.
-    """
-    Qmodel.eval()  # Set model to evaluation mode
-    perform = 0
-    for _ in range(repeats):
+        hidden_state = self.policy_net.init_hidden(self.batch_size, device)
+
+        # Get current Q-values from policy network
+        q_values, next_hidden_state = self.policy_net(states, hidden_state)
+        q_values = q_values.squeeze(1)
+
+        state_action_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+
+        next_states = next_states.unsqueeze(-1)
+        # Get next Q-values from target network
+        next_q_values, _ = self.target_net(next_states, hidden_state)
+        next_q_values = next_q_values.squeeze(1)
+        next_state_values = next_q_values.max(1)[0]
+
+        # Compute expected Q-values
+        expected_state_action_values = rewards + (self.gamma * next_state_values * (1 - dones))
+
+        # Compute loss
+        loss = nn.MSELoss()(state_action_values, expected_state_action_values)
+        # Optimize the model
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        return next_hidden_state
+
+    def update_target_network(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+
+
+# Training loop example
+def train_dqn(agent, env, num_episodes=1000, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=500):
+    epsilon = epsilon_start
+    hidden_state = agent.policy_net.init_hidden(agent.batch_size, device)
+    for episode in range(num_episodes):
         state = env.reset()
+
         done = False
-        while not done:
-            # Convert state to a 3D tensor: (batch_size=1, seq_len=1, input_size)
-            state = torch.Tensor(state).unsqueeze(0).unsqueeze(0).to(device)
+        total_reward = 0
 
-            with torch.no_grad():
-                values = Qmodel(state)  # Forward pass through Q-model
+        for t in count():
+            action = agent.select_action(state, epsilon)
+            next_state, reward, done, _ = env.step(action)
 
-            # Get the action with the highest Q-value
-            q_values = values[0]
-            action = np.argmax(q_values.cpu().numpy())
+            # Store the transition in the replay buffer
+            agent.replay_buffer.push(state, action, next_state, reward, done)
 
-            # Step the environment
-            state, reward, done, _ = env.step(action)
-            perform += reward
-    Qmodel.train()  # Set model back to training mode
-    return perform / repeats
+            # Perform one step of optimization
+            hidden_state = agent.optimize_model(hidden_state)
 
+            # Move to the next state
+            state = next_state
+            total_reward += reward
 
+            # Update the target network
+            if episode % 10 == 0:
+                agent.update_target_network()
 
-def update_parameters(current_model, target_model):
-    target_model.load_state_dict(current_model.state_dict())
+            if done:
+                episode_durations.append(t + 1)
+                episode_rewards.append(total_reward)
+                #plot_durations()
+                #plot_rewards()
+                break
+
+        # Decay epsilon
+        epsilon = max(epsilon_end, epsilon - (epsilon_start - epsilon_end) / epsilon_decay)
+
+        print(
+            f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, Total Reward: {total_reward}, Epsilon: {epsilon:.2f}")
+
 
 def plot_rewards(show_result=False, save_path=None):
     plt.figure(2)
@@ -222,58 +240,18 @@ class Command(BaseCommand):
         rnn_dqn_config['num_episodes'] = options['num_episodes']
         start_time = time.time()
 
-        eps = rnn_dqn_config['eps_start']
-
         env = LearnerEnv(rnn_dqn_config['max_steps'])
         # Get number of actions from gym action space
-        n_actions = env.action_space.n
+
         state = env.reset()
+
+        n_actions = env.action_space.n
         n_observations = len(state)
+        hidden_size = rnn_dqn_config['num_episodes']
 
-        Q_model = RNNQNetwork(action_dim=n_actions, state_dim=n_observations).to(device)
+        agent = DQNAgent(n_observations, hidden_size, n_actions, device, batch_size=rnn_dqn_config['batch_size'])
+        train_dqn(agent, env, num_episodes=rnn_dqn_config['num_episodes'])
 
-        optimizer = torch.optim.Adam(Q_model.parameters(), lr=rnn_dqn_config['lr'])
-        scheduler = StepLR(optimizer, step_size=rnn_dqn_config['lr_step'], gamma=rnn_dqn_config['lr_gamma'])
-
-        memory = Memory(rnn_dqn_config['replay_memory'],
-                        rnn_dqn_config['sequence_length'])
-        performance = []
-
-        for episode in range(rnn_dqn_config['num_episodes']):
-            state = env.reset()
-            memory.states.append(state)
-            print(f"Episode: {episode}")
-            env.render()
-            total_reward = 0
-            for t in count():
-
-                action = select_action(Q_model, env, state, eps)
-                state, reward, done, _ = env.step(action)
-                total_reward += reward
-                # save state, action, reward sequence
-                memory.update(state, action, reward, done)
-
-                if done:
-                    episode_durations.append(t + 1)
-                    episode_rewards.append(total_reward)
-                    env.render()
-                    break
-
-            if episode >= rnn_dqn_config['min_episodes'] and episode % rnn_dqn_config['update_step'] == 0:
-                for _ in range(rnn_dqn_config['update_repeats']):
-                    train(rnn_dqn_config['batch_size'], Q_model, optimizer, memory, rnn_dqn_config['lr_gamma'])
-
-            # update learning rate and eps
-            scheduler.step()
-            eps = max(eps * rnn_dqn_config['eps_decay'], rnn_dqn_config['eps_end'])
-
-            # display the performance
-            if (episode % rnn_dqn_config['measure_step'] == 0) and episode >= rnn_dqn_config['min_episodes']:
-                performance.append([episode, evaluate(Q_model, env, rnn_dqn_config['measure_repeats'])])
-                print("Episode: ", episode)
-                print("rewards: ", performance[-1][1])
-                print("lr: ", scheduler.get_last_lr()[0])
-                print("eps: ", eps)
 
         end_time = time.time()
         elapsed_time = end_time - start_time
@@ -289,7 +267,7 @@ class Command(BaseCommand):
         rewards_file = os.path.join(output_dir, "results-rewards.png")
         config_output_file = os.path.join(output_dir, "config.json")
 
-        torch.save(Q_model.state_dict(), model_output_file)
+        torch.save(agent.policy_net.state_dict(), model_output_file)
 
         with open(config_output_file, "w") as file:
             json.dump(rnn_dqn_config, file, indent=4)

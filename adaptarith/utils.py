@@ -2,7 +2,7 @@ import random
 import torch
 import os
 
-from rnn_dqn_model.rnn_dqn import RNNQNetwork
+from rnn_dqn_model.rnn_dqn import LSTM_DQN
 from rnn_dqn_model import rnn_dqn_config
 from django.conf import settings
 from adaptarith.models import Question, KnowledgeLevel
@@ -64,19 +64,22 @@ def get_next_question(user=None,
 
     state_dict_path = os.path.join(settings.BASE_DIR, model_pth)
 
-    model = RNNQNetwork(state_dim=num_observations,
-                action_dim=num_actions,
-                hidden_dims=rnn_dqn_config.ADAPTARITH_TRAINING['hidden_dims'])
+    model = LSTM_DQN(input_size=num_observations,
+                     hidden_size=rnn_dqn_config.ADAPTARITH_TRAINING['hidden_dims'],
+                     output_size=num_actions)
     model.load_state_dict(torch.load(state_dict_path, weights_only=False))
     model.eval()
 
     print(knowledge_level)
-    state_tensor = torch.tensor(knowledge_level, dtype=torch.float32).unsqueeze(0)
+    input_kl = [x / 100.0 for x in knowledge_level]
+    state_tensor = torch.tensor(input_kl, dtype=torch.float32).unsqueeze(0)
     print(state_tensor)
     with torch.no_grad():  # Disable gradient calculation since we are only inferring
         q_values, _ = model(state_tensor)  # Get Q-values from the model
 
     # Select the action with the highest Q-value (for DQN)
+    if q_values.dim() == 1:
+        q_values = q_values.unsqueeze(0)
     action = torch.argmax(q_values, dim=1).item()
 
     # 'translate' action into level & topic

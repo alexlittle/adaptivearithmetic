@@ -2,30 +2,45 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class RNNQNetwork(nn.Module):
-    def __init__(self, action_dim, state_dim, hidden_dims=128, rnn_layers=1):
-        super(RNNQNetwork, self).__init__()
-        self.hidden_dim = hidden_dims
-        self.rnn_layers = rnn_layers
 
-        # RNN Layer (LSTM)
-        self.lstm = nn.LSTM(input_size=state_dim, hidden_size=hidden_dims, num_layers=rnn_layers, batch_first=True)
+class LSTM_DQN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, n_layers=1):
+        super(LSTM_DQN, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.n_layers = n_layers
 
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(hidden_dims, hidden_dims)
-        self.fc2 = nn.Linear(hidden_dims, action_dim)
+        # LSTM layer
+        self.lstm = nn.LSTM(input_size, hidden_size, n_layers, batch_first=True)
+
+        # Fully connected layer to output Q-values
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x, hidden=None):
-        if len(x.shape) == 2:  # If single state, add sequence dimension
-            x = x.unsqueeze(1)
+        # Pass input through LSTM
+        out, hidden = self.lstm(x, hidden)
 
-        # Pass through RNN
-        lstm_out, hidden = self.lstm(x, hidden)
+        # Get the last time-step output (batch_size, hidden_size)
+        if out.dim() == 3:  # (batch_size, seq_len, hidden_size)
+            out = out[:, -1, :]  # Take the last time step
 
-        # Take only the output from the last time step
-        lstm_out = lstm_out[:, -1, :]
+        # If batch size is 1, the output will have shape [seq_len, hidden_size]
+        elif out.dim() == 2:  # (seq_len, hidden_size)
+            out = out[-1, :]
 
-        # Pass through fully connected layers
-        x = F.relu(self.fc1(lstm_out))
-        x = self.fc2(x)
-        return x, hidden
+        # Pass the LSTM output through the fully connected layer
+        q_values = self.fc(out)
+        return q_values, hidden
+
+    def init_hidden(self, batch_size, device):
+        # If batch size is 1, hidden state is 2D, else it is 3D
+        h0 = torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device)
+        c0 = torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device)
+        return (h0, c0)
+
+    def init_hidden(self, batch_size, device):
+        # If batch size is 1, hidden state is 2D, else it is 3D
+        h0 = torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device)
+        c0 = torch.zeros(self.n_layers, batch_size, self.hidden_size).to(device)
+        return (h0, c0)

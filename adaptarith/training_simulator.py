@@ -42,13 +42,12 @@ class LearnerEnv(gym.Env):
 
     def step(self, action):
 
-
         self.last_actions.append(action)
-        if len(self.last_actions) > 6:
+        if len(self.last_actions) > 7:
             self.last_actions.pop(0)  # Keep only the last 6 actions
 
         # Check if all last actions are the same
-        if len(self.last_actions) == 6 and all(a == self.last_actions[0] for a in self.last_actions):
+        if len(self.last_actions) == 7 and all(a == self.last_actions[0] for a in self.last_actions):
             repetition_penalty = 2  # Apply a penalty for repetition
         else:
             repetition_penalty = 0
@@ -81,7 +80,7 @@ class LearnerEnv(gym.Env):
         alpha = 0.2  # Scaling factor for probability decay
 
         # Calculate the learner's knowledge band (0–3)
-        knowledge_band = self.state[topic] // 25
+        knowledge_band = self.state[topic] // (100/len(settings.ADAPTARITH_LEVELS))
 
         #print(level, knowledge_band)
         # Calculate the difficulty mismatch
@@ -95,21 +94,21 @@ class LearnerEnv(gym.Env):
 
     def calculate_reward(self, level, topic, is_correct):
         # Base reward calculation
-        base_reward = settings.ADAPTARITH_POINTS_FOR_CORRECT if is_correct else -5
-        knowledge_band = self.state[topic] // 25
+        base_reward = settings.ADAPTARITH_POINTS_FOR_CORRECT if is_correct else -settings.ADAPTARITH_POINTS_FOR_CORRECT
+        knowledge_band = self.state[topic] // (100/len(settings.ADAPTARITH_LEVELS))
         difficulty_mismatch = abs(level - knowledge_band)
         # Apply reward penalty or bonus based on difficulty mismatch
         if difficulty_mismatch == 0:
             reward = base_reward
         elif difficulty_mismatch == 1:
-            reward = base_reward - 2.5
+            reward = 0
         elif difficulty_mismatch == 2:
-            reward = base_reward - 5
+            reward = -2.5
         else:
-            reward = base_reward - 7.5
+            reward = -settings.ADAPTARITH_POINTS_FOR_CORRECT
 
         # Clamp the reward to be between -5 and 5
-        reward = max(-5, min(5, reward))
+        reward = max(-settings.ADAPTARITH_POINTS_FOR_CORRECT, min(settings.ADAPTARITH_POINTS_FOR_CORRECT, reward))
 
         return reward
 

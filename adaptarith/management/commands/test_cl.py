@@ -39,31 +39,42 @@ class Command(BaseCommand):
             help=f'Whether to use most recent from dir, (default false)'
         )
 
+        parser.add_argument(
+            '--pre_test',
+            action='store_true',
+            help=f'Whether to use a pretest, (default true)'
+        )
+
     def handle(self, *args, **options):
         model_pth = options['model_pth']
-
+        pre_test = options['pre_test']
+        print(pre_test)
         if options['recent']:
             directory = os.path.join(settings.BASE_DIR, options['recent'], 'results')
             max_number = find_max_subdir(directory)
             model_pth = f"{options['recent']}/results/{max_number}/model.pth"
 
         print(f"Using model: {model_pth}")
-        print("Pre-test")
-        print("-----------------")
 
-        # training=True so questions etc not saved to DB
-        pre_test = utils.generate_pre_test(training=True)
+        if pre_test:
+            print("Pre-test")
+            print("-----------------")
 
-        for question in pre_test:
-            default = question.get_correct_answer()
-            question_string = utils.format_question(question)
-            user_input = input(f"{question_string} = ({default}) ")
-            question.response = user_input if user_input else default
+            # training=True so questions etc not saved to DB
+            pre_test = utils.generate_pre_test(training=True)
 
-        # mark and get initial knowledge
-        knowledge_level = KnowledgeLevel.pre_test_init_knowledge_level(pre_test)
-        print("-----------------")
-        print("Pre-test completed: ")
+            for question in pre_test:
+                default = question.get_correct_answer()
+                question_string = utils.format_question(question)
+                user_input = input(f"{question_string} = ({default}) ")
+                question.response = user_input if user_input else default
+
+            # mark and get initial knowledge
+            knowledge_level = KnowledgeLevel.pre_test_init_knowledge_level(pre_test)
+            print("-----------------")
+            print("Pre-test completed: ")
+
+        knowledge_level = [0]
         print(f"Knowledge level: {knowledge_level}")
         print("-----------------")
 
