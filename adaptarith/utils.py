@@ -2,7 +2,8 @@ import random
 import torch
 import os
 
-from dqn_model.dqn import DQN
+from rnn_dqn_model.rnn_dqn import RNNQNetwork
+from rnn_dqn_model import rnn_dqn_config
 from django.conf import settings
 from adaptarith.models import Question, KnowledgeLevel
 
@@ -63,9 +64,9 @@ def get_next_question(user=None,
 
     state_dict_path = os.path.join(settings.BASE_DIR, model_pth)
 
-    model = DQN(n_observations=num_observations,
-                n_actions=num_actions,
-                hidden_dims=settings.ADAPTARITH_TRAINING['hidden_dims'])
+    model = RNNQNetwork(state_dim=num_observations,
+                action_dim=num_actions,
+                hidden_dims=rnn_dqn_config.ADAPTARITH_TRAINING['hidden_dims'])
     model.load_state_dict(torch.load(state_dict_path, weights_only=False))
     model.eval()
 
@@ -73,7 +74,7 @@ def get_next_question(user=None,
     state_tensor = torch.tensor(knowledge_level, dtype=torch.float32).unsqueeze(0)
     print(state_tensor)
     with torch.no_grad():  # Disable gradient calculation since we are only inferring
-        q_values = model(state_tensor)  # Get Q-values from the model
+        q_values, _ = model(state_tensor)  # Get Q-values from the model
 
     # Select the action with the highest Q-value (for DQN)
     action = torch.argmax(q_values, dim=1).item()

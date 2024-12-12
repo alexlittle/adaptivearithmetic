@@ -255,7 +255,7 @@ class Command(BaseCommand):
         output_dir = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', timestamp)
         os.makedirs(output_dir, exist_ok=True)
 
-        model_output_file = os.path.join(output_dir, "model.pth")
+        model_output_file = os.path.join(output_dir, "model .pth")
         durations_file = os.path.join(output_dir, "results-durations.png")
         rewards_file = os.path.join(output_dir, "results-rewards.png")
         config_output_file = os.path.join(output_dir, "config.json")

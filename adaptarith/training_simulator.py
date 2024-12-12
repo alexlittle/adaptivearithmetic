@@ -8,9 +8,10 @@ from django.conf import settings
 
 class LearnerEnv(gym.Env):
 
-    def __init__(self):
+    def __init__(self, max_steps):
         super(LearnerEnv, self).__init__()
         self.current_step = 0
+        self.max_steps = max_steps
         self.observation_space = spaces.Box(low=0, high=100, shape=(len(settings.ADAPTARITH_TOPICS),), dtype=np.float32)
 
         # Action space: num levels * num topics
@@ -20,7 +21,7 @@ class LearnerEnv(gym.Env):
         self.last_actions = []
 
     def is_done(self):
-        if self.current_step >= settings.ADAPTARITH_TRAINING['max_steps']:
+        if self.current_step >= self.max_steps:
             return True
         for i in range(0, len(self.state)):
             if self.state[i] < settings.ADAPTARITH_PASS_THRESHOLD:

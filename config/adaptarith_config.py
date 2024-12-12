@@ -11,19 +11,7 @@ ADAPTARITH_TOPICS = ['add']
 '''
 Settings for model and simulator whilst training
 '''
-ADAPTARITH_TRAINING = {
-    'hidden_dims': 128, # how many nodes in each hidden layer of NN
-    'num_episodes': 300, # number of simulator episodes to run when training
-    'batch_size': 64, # BATCH_SIZE is the number of transitions sampled from the replay buffer
-    'max_steps': 80, # max no steps per episode whilst training
-    'gamma': 0.99, # GAMMA is the discount factor
-    'eps_start': 1.0, # EPS_START is the starting value of epsilon
-    'eps_end': 0.05, # EPS_END is the final value of epsilon
-    'eps_decay': 5000, # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
-    'tau': 0.005, # TAU is the update rate of the target network
-    'lr': 1e-4, # LR is the learning rate of the ``AdamW`` optimizer
-    'replay_memory': 1000000,
-}
+
 
 
 '''

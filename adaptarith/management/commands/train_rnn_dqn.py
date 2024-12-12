@@ -24,8 +24,9 @@ from rnn_dqn_model.rnn_dqn import RNNQNetwork
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
+from rnn_dqn_model import rnn_dqn_config
 
-ddqn_config = settings.ADAPTARITH_TRAINING
+rnn_dqn_config = rnn_dqn_config.ADAPTARITH_TRAINING
 
 
 episode_durations = []
@@ -206,35 +207,24 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch_size',
             type=int,
-            default=settings.ADAPTARITH_TRAINING['batch_size'],
-            help=f"Size of each batch (default: {settings.ADAPTARITH_TRAINING['batch_size']})"
+            default=rnn_dqn_config['batch_size'],
+            help=f"Size of each batch (default: {rnn_dqn_config['batch_size']})"
         )
         parser.add_argument(
             '--num_episodes',
             type=int,
-            default=settings.ADAPTARITH_TRAINING['num_episodes'],
-            help=f"Number of episodes to process (default: {settings.ADAPTARITH_TRAINING['num_episodes']})"
+            default=rnn_dqn_config['num_episodes'],
+            help=f"Number of episodes to process (default: {rnn_dqn_config['num_episodes']})"
         )
 
     def handle(self, *args, **options):
-        batch_size = options['batch_size']
-        num_episodes = options['num_episodes']
+        rnn_dqn_config['batch_size'] = options['batch_size']
+        rnn_dqn_config['num_episodes'] = options['num_episodes']
         start_time = time.time()
 
-        lr_step = 100
-        lr_gamma = 1
-        measure_step = 100
-        min_episodes = 20
-        measure_repeats = 100
-        update_step = 10
-        update_repeats = 50
-        eps_decay = 0.998
-        sequence_length = 20
-        gamma = settings.ADAPTARITH_TRAINING['gamma']
-        eps_min = settings.ADAPTARITH_TRAINING['eps_end']
-        eps = settings.ADAPTARITH_TRAINING['eps_start']
+        eps = rnn_dqn_config['eps_start']
 
-        env = LearnerEnv()
+        env = LearnerEnv(rnn_dqn_config['max_steps'])
         # Get number of actions from gym action space
         n_actions = env.action_space.n
         state = env.reset()
@@ -242,13 +232,14 @@ class Command(BaseCommand):
 
         Q_model = RNNQNetwork(action_dim=n_actions, state_dim=n_observations).to(device)
 
-        optimizer = torch.optim.Adam(Q_model.parameters(), lr=settings.ADAPTARITH_TRAINING['lr'])
-        scheduler = StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
+        optimizer = torch.optim.Adam(Q_model.parameters(), lr=rnn_dqn_config['lr'])
+        scheduler = StepLR(optimizer, step_size=rnn_dqn_config['lr_step'], gamma=rnn_dqn_config['lr_gamma'])
 
-        memory = Memory(settings.ADAPTARITH_TRAINING['replay_memory'], sequence_length)
+        memory = Memory(rnn_dqn_config['replay_memory'],
+                        rnn_dqn_config['sequence_length'])
         performance = []
 
-        for episode in range(num_episodes):
+        for episode in range(rnn_dqn_config['num_episodes']):
             state = env.reset()
             memory.states.append(state)
             print(f"Episode: {episode}")
@@ -268,17 +259,17 @@ class Command(BaseCommand):
                     env.render()
                     break
 
-            if episode >= min_episodes and episode % update_step == 0:
-                for _ in range(update_repeats):
-                    train(batch_size, Q_model, optimizer, memory, gamma)
+            if episode >= rnn_dqn_config['min_episodes'] and episode % rnn_dqn_config['update_step'] == 0:
+                for _ in range(rnn_dqn_config['update_repeats']):
+                    train(rnn_dqn_config['batch_size'], Q_model, optimizer, memory, rnn_dqn_config['lr_gamma'])
 
             # update learning rate and eps
             scheduler.step()
-            eps = max(eps * eps_decay, eps_min)
+            eps = max(eps * rnn_dqn_config['eps_decay'], rnn_dqn_config['eps_end'])
 
             # display the performance
-            if (episode % measure_step == 0) and episode >= min_episodes:
-                performance.append([episode, evaluate(Q_model, env, measure_repeats)])
+            if (episode % rnn_dqn_config['measure_step'] == 0) and episode >= rnn_dqn_config['min_episodes']:
+                performance.append([episode, evaluate(Q_model, env, rnn_dqn_config['measure_repeats'])])
                 print("Episode: ", episode)
                 print("rewards: ", performance[-1][1])
                 print("lr: ", scheduler.get_last_lr()[0])
@@ -287,7 +278,7 @@ class Command(BaseCommand):
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Total runtime: {elapsed_time:.2f} seconds")
-        ddqn_config['runtime'] = elapsed_time
+        rnn_dqn_config['runtime'] = elapsed_time
         # write pth, graphs and config
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         output_dir = os.path.join(settings.BASE_DIR, 'rnn_dqn_model', 'results', timestamp)
@@ -301,7 +292,7 @@ class Command(BaseCommand):
         torch.save(Q_model.state_dict(), model_output_file)
 
         with open(config_output_file, "w") as file:
-            json.dump(ddqn_config, file, indent=4)
+            json.dump(rnn_dqn_config, file, indent=4)
 
         plot_durations(show_result=True, save_path=durations_file)
         plot_rewards(show_result=True, save_path=rewards_file)
