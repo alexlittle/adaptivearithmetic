@@ -9,11 +9,9 @@ import json
 import os
 import time
 import torch
-import numpy as np
 import torch.nn as nn
 import random
 import matplotlib.pyplot as plt
-from collections import deque
 from itertools import count
 from datetime import datetime
 import torch.optim as optim
@@ -83,18 +81,14 @@ class DQNAgent:
                 q_values = q_values.unsqueeze(0)
             return torch.argmax(q_values, dim=1).item()
 
-    def optimize_model(self, hidden_state):
-        seq_len = 10
+    def optimize_model(self):
         if len(self.replay_buffer) < self.batch_size:
             return
 
-        # Sample a batch of transitions
         batch = self.replay_buffer.sample(self.batch_size)
 
         # Prepare the batch
         states, actions, next_states, rewards, dones = zip(*batch)
-
-        # Convert to tensors
 
         states = torch.tensor(states, dtype=torch.float32).to(self.device)
         next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
@@ -102,7 +96,8 @@ class DQNAgent:
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         dones = torch.tensor(dones, dtype=torch.uint8).to(self.device)
 
-        states = states.unsqueeze(-1)
+        # if state is just [0.5] then unsqueeze(-1) if [0.5, 0.6...] then unsqueeze(1)
+        states = states.unsqueeze(1)
 
         hidden_state = self.policy_net.init_hidden(self.batch_size, device)
 
@@ -112,18 +107,17 @@ class DQNAgent:
 
         state_action_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        next_states = next_states.unsqueeze(-1)
-        # Get next Q-values from target network
+        next_states = next_states.unsqueeze(1)
+
         next_q_values, _ = self.target_net(next_states, hidden_state)
         next_q_values = next_q_values.squeeze(1)
         next_state_values = next_q_values.max(1)[0]
 
-        # Compute expected Q-values
+        # Expected Q-values
         expected_state_action_values = rewards + (self.gamma * next_state_values * (1 - dones))
 
         # Compute loss
         loss = nn.MSELoss()(state_action_values, expected_state_action_values)
-        # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -134,45 +128,37 @@ class DQNAgent:
 
 
 # Training loop example
-def train_dqn(agent, env, num_episodes=1000, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=500):
-    epsilon = epsilon_start
-    hidden_state = agent.policy_net.init_hidden(agent.batch_size, device)
+def train_dqn(agent, env, num_episodes, epsilon_decay):
+    epsilon = rnn_dqn_config['epsilon_start']
     for episode in range(num_episodes):
         state = env.reset()
-
-        done = False
+        ep_start_time = time.time()
         total_reward = 0
 
         for t in count():
             action = agent.select_action(state, epsilon)
             next_state, reward, done, _ = env.step(action)
-
-            # Store the transition in the replay buffer
             agent.replay_buffer.push(state, action, next_state, reward, done)
 
-            # Perform one step of optimization
-            hidden_state = agent.optimize_model(hidden_state)
+            agent.optimize_model()
 
-            # Move to the next state
             state = next_state
             total_reward += reward
 
-            # Update the target network
             if episode % 10 == 0:
                 agent.update_target_network()
 
             if done:
                 episode_durations.append(t + 1)
                 episode_rewards.append(total_reward)
-                #plot_durations()
-                #plot_rewards()
                 break
 
         # Decay epsilon
-        epsilon = max(epsilon_end, epsilon - (epsilon_start - epsilon_end) / epsilon_decay)
-
-        print(
-            f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, Total Reward: {total_reward}, Epsilon: {epsilon:.2f}")
+        epsilon = max(rnn_dqn_config['epsilon_end'],
+                      epsilon - (rnn_dqn_config['epsilon_start'] - rnn_dqn_config['epsilon_end']) / epsilon_decay)
+        ep_time = time.time() - ep_start_time
+        print(f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, "
+                f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
 
 
 def plot_rewards(show_result=False, save_path=None):
@@ -238,19 +224,26 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         rnn_dqn_config['batch_size'] = options['batch_size']
         rnn_dqn_config['num_episodes'] = options['num_episodes']
+        rnn_dqn_config['epsilon_decay'] = options['num_episodes']/2
         start_time = time.time()
 
         env = LearnerEnv(rnn_dqn_config['max_steps'])
-        # Get number of actions from gym action space
 
         state = env.reset()
 
         n_actions = env.action_space.n
         n_observations = len(state)
-        hidden_size = rnn_dqn_config['num_episodes']
+        hidden_size = rnn_dqn_config['hidden_dims']
 
-        agent = DQNAgent(n_observations, hidden_size, n_actions, device, batch_size=rnn_dqn_config['batch_size'])
-        train_dqn(agent, env, num_episodes=rnn_dqn_config['num_episodes'])
+        agent = DQNAgent(n_observations,
+                         hidden_size,
+                         n_actions,
+                         device,
+                         batch_size=rnn_dqn_config['batch_size'])
+        train_dqn(agent,
+                  env,
+                  rnn_dqn_config['num_episodes'],
+                  rnn_dqn_config['epsilon_decay'])
 
 
         end_time = time.time()

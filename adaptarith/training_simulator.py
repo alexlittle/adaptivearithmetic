@@ -37,18 +37,17 @@ class LearnerEnv(gym.Env):
         return clipped_reward
 
     def _simulate_pre_test(self):
-        #  always set to zero knowledge
         return [random.choice(range(0,90)) for _ in settings.ADAPTARITH_TOPICS]
 
     def step(self, action):
 
         self.last_actions.append(action)
         if len(self.last_actions) > 7:
-            self.last_actions.pop(0)  # Keep only the last 6 actions
+            self.last_actions.pop(0)
 
-        # Check if all last actions are the same
+        # Apply a penalty for repetition
         if len(self.last_actions) == 7 and all(a == self.last_actions[0] for a in self.last_actions):
-            repetition_penalty = 2  # Apply a penalty for repetition
+            repetition_penalty = 2
         else:
             repetition_penalty = 0
 
@@ -57,16 +56,13 @@ class LearnerEnv(gym.Env):
         topic = action % len(settings.ADAPTARITH_TOPICS)
 
         reward = self.simulate_learning(level, topic) - repetition_penalty
-        #knowledge_gain = reward * (1 + 0.1 * abs(level - (self.state[topic] // 25))) - repetition_penalty
         self.state[topic] += reward
         self.state[topic] = min(self.state[topic], 100)
         self.state[topic] = max(self.state[topic], 0)
 
-        #print(action, reward, self.state[topic])
         self.current_step += 1
         done = self.is_done()
 
-        #return self.state, reward, done, {}
         return self._normalise_state(), self._normalise_reward(reward), done, {}
 
 
@@ -82,7 +78,6 @@ class LearnerEnv(gym.Env):
         # Calculate the learner's knowledge band (0–3)
         knowledge_band = self.state[topic] // (100/len(settings.ADAPTARITH_LEVELS))
 
-        #print(level, knowledge_band)
         # Calculate the difficulty mismatch
         difficulty_mismatch = abs(level - knowledge_band)
 
@@ -107,10 +102,8 @@ class LearnerEnv(gym.Env):
         else:
             reward = -settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        # Clamp the reward to be between -5 and 5
-        reward = max(-settings.ADAPTARITH_POINTS_FOR_CORRECT, min(settings.ADAPTARITH_POINTS_FOR_CORRECT, reward))
-
-        return reward
+        # keep rewards within bounds
+        return max(-settings.ADAPTARITH_POINTS_FOR_CORRECT, min(settings.ADAPTARITH_POINTS_FOR_CORRECT, reward))
 
     def reset(self):
         return self.reset_to_value(value=0)

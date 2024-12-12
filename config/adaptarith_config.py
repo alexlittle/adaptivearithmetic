@@ -5,13 +5,8 @@ Settings for levels and topics available
 
 ADAPTARITH_LEVELS = ['easy', 'mod', 'hard', 'vhard']
 
-ADAPTARITH_TOPICS = ['add']
+ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 #ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
-
-'''
-Settings for model and simulator whilst training
-'''
-
 
 
 '''

@@ -3,5 +3,7 @@ ADAPTARITH_TRAINING = {
     'num_episodes': 300, # number of simulator episodes to run when training
     'batch_size': 32, # BATCH_SIZE is the number of transitions sampled from the replay buffer
     'max_steps': 100, # max no steps per episode whilst training
+    'epsilon_start': 1.0,
+    'epsilon_end': 1.0,
 
 }

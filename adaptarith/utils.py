@@ -54,7 +54,8 @@ def generate_pre_test(training=False, user=None):
 
 def get_next_question(user=None,
                       knowledge_level=None,
-                      model_pth=settings.ADAPTARITH_MODEL_PATH):
+                      model_pth=settings.ADAPTARITH_MODEL_PATH,
+                      debug=False):
 
     if not knowledge_level:
         knowledge_level = KnowledgeLevel.get_latest_for_user_as_list(user)
@@ -70,10 +71,9 @@ def get_next_question(user=None,
     model.load_state_dict(torch.load(state_dict_path, weights_only=False))
     model.eval()
 
-    print(knowledge_level)
     input_kl = [x / 100.0 for x in knowledge_level]
     state_tensor = torch.tensor(input_kl, dtype=torch.float32).unsqueeze(0)
-    print(state_tensor)
+
     with torch.no_grad():  # Disable gradient calculation since we are only inferring
         q_values, _ = model(state_tensor)  # Get Q-values from the model
 
@@ -85,8 +85,10 @@ def get_next_question(user=None,
     # 'translate' action into level & topic
     level = settings.ADAPTARITH_LEVELS[action // len(settings.ADAPTARITH_TOPICS)]
     topic = settings.ADAPTARITH_TOPICS[action % len(settings.ADAPTARITH_TOPICS)]
-    print("")
-    print("Q-values:", q_values.numpy())
-    print(f"Action: {action},  Level: {level}, Topic: {topic}")
+
+    if debug:
+        print("")
+        print("Q-values:", q_values.numpy())
+        print(f"Action: {action},  Level: {level}, Topic: {topic}")
 
     return generate_question(topic, level, user=user)

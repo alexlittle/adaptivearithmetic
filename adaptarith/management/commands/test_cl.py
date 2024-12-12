@@ -27,7 +27,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--model_pth',
+                '--model_pth',
             type=str,
             default=settings.ADAPTARITH_MODEL_PATH,
             help=f'Model pth file to use, (default {settings.ADAPTARITH_MODEL_PATH})'
@@ -40,15 +40,15 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
-            '--pre_test',
+            '--no_pre_test',
             action='store_true',
             help=f'Whether to use a pretest, (default true)'
         )
 
     def handle(self, *args, **options):
         model_pth = options['model_pth']
-        pre_test = options['pre_test']
-        print(pre_test)
+        no_pre_test = options['no_pre_test']
+
         if options['recent']:
             directory = os.path.join(settings.BASE_DIR, options['recent'], 'results')
             max_number = find_max_subdir(directory)
@@ -56,7 +56,7 @@ class Command(BaseCommand):
 
         print(f"Using model: {model_pth}")
 
-        if pre_test:
+        if not no_pre_test:
             print("Pre-test")
             print("-----------------")
 
@@ -73,8 +73,9 @@ class Command(BaseCommand):
             knowledge_level = KnowledgeLevel.pre_test_init_knowledge_level(pre_test)
             print("-----------------")
             print("Pre-test completed: ")
+        else:
+            knowledge_level = [0 for _ in settings.ADAPTARITH_TOPICS]
 
-        knowledge_level = [0]
         print(f"Knowledge level: {knowledge_level}")
         print("-----------------")
 
@@ -82,7 +83,8 @@ class Command(BaseCommand):
         while True:
             next_question = utils.get_next_question(user=None,
                                                     knowledge_level=knowledge_level,
-                                                    model_pth=model_pth)
+                                                    model_pth=model_pth,
+                                                    debug=True)
 
             question_string = utils.format_question(next_question)
             default = next_question.get_correct_answer()
@@ -91,8 +93,12 @@ class Command(BaseCommand):
             user_input = input(f"{question_string} = ({default})")
 
             next_question.response = user_input if user_input else default
+
             score = next_question.mark_question()
+
             existing_score = knowledge_level[settings.ADAPTARITH_TOPICS.index(next_question.topic)]
             existing_score += score
+
             knowledge_level[settings.ADAPTARITH_TOPICS.index(next_question.topic)] = min(existing_score, 100)
+
             print(f"New knowledge level: {knowledge_level}")
