@@ -2,11 +2,31 @@ import random
 import torch
 import os
 
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 from rnn_dqn_model.rnn_dqn import LSTM_DQN
 from rnn_dqn_model import rnn_dqn_config
 from django.conf import settings
 from adaptarith.models import Question, KnowledgeLevel
 
+def get_user(request):
+    if request.user.is_authenticated:
+        return request.user
+    else:
+        if not request.session.session_key:
+            request.session.save()
+        if not request.session.get('temp_user_id'):
+            # Create a temporary user
+            temp_user = User.objects.create_user(
+                username=f"temp_user_{request.session.session_key}",
+                first_name=request.GET.get('name', 'Guest'),
+                is_active=False
+            )
+            request.session['temp_user_id'] = temp_user.id
+            login(request, temp_user)
+        else:
+            temp_user = User.objects.get(id=request.session['temp_user_id'])
+        return temp_user
 
 def format_question(question):
     if question.topic == 'add':

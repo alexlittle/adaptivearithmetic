@@ -1,9 +1,9 @@
 from django.views.generic import TemplateView, FormView
 from django.contrib.auth.views import LogoutView
+
 from django.urls import reverse_lazy, reverse
 from django.shortcuts import redirect
 from django.conf import settings
-from django.db.models import Max
 
 from adaptarith.models import Question, KnowledgeLevel
 from adaptarith.forms import AnswerForm
@@ -12,6 +12,12 @@ from adaptarith import utils
 class HomeView(TemplateView):
     template_name = 'adaptarith/home.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = utils.get_user(self.request)
+        print(user)
+        return context
+
 
 class UserLogoutView(LogoutView):
     next_page = reverse_lazy('adaptarith:index')
@@ -19,12 +25,13 @@ class UserLogoutView(LogoutView):
 
 def start_pretest(request):
 
+    user = utils.get_user(request)
     # remove any current questions from session
     request.session.pop('question_ids', None)
     request.session.pop('current_question_index', None)
 
     # Generate a pre test - saving questions to db
-    questions = utils.generate_pre_test(user=request.user)
+    questions = utils.generate_pre_test(user=user)
     question_ids = []
 
     for q in questions:
@@ -91,7 +98,7 @@ class PreTestQuestionView(FormView):
         kls = kl.pre_test_init_knowledge_level(questions)
         for idx, kl in enumerate(kls):
             know_level = KnowledgeLevel()
-            know_level.user = self.request.user
+            know_level.user = utils.get_user(self.request)
             know_level.topic = settings.ADAPTARITH_TOPICS[idx]
             know_level.score = kl
             know_level.save()
@@ -103,7 +110,8 @@ class PreTestCompleteView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
+        user = utils.get_user(self.request)
+        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(user)
         return context
 
 
@@ -112,12 +120,11 @@ class RunView(FormView):
     form_class = AnswerForm
 
     def get_question(self, knowledge_levels):
-
         try:
             q_id = self.request.session['current_question']
         except KeyError:
-            #generate
-            q_id = utils.get_next_question(user=self.request.user).id
+            user = utils.get_user(self.request)
+            q_id = utils.get_next_question(user=user).id
 
         self.request.session['current_question'] = q_id
         self.request.session.modified = True
@@ -126,7 +133,8 @@ class RunView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
+        user = utils.get_user(self.request)
+        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(user)
         next_question_id = self.get_question(context['knowledge_levels'])
         question = Question.objects.get(pk=next_question_id)
         context['question'] = utils.format_question(question)
@@ -138,15 +146,15 @@ class RunView(FormView):
         question = Question.objects.get(pk=q_id)
         question.response = form.cleaned_data['response']
         question.save()
-
+        user = utils.get_user(self.request)
         score = 0
         if question.response == question.get_correct_answer():
             score = settings.ADAPTARITH_POINTS_FOR_CORRECT
 
-        latest_score = KnowledgeLevel.get_latest_for_topic(self.request.user, question.topic)
+        latest_score = KnowledgeLevel.get_latest_for_topic(user, question.topic)
         if score != 0:
             kl = KnowledgeLevel()
-            kl.user = self.request.user
+            kl.user = user
             kl.topic = question.topic
             kl.score = min(latest_score + score, 100)
             kl.save()
@@ -155,7 +163,7 @@ class RunView(FormView):
         self.request.session.pop('current_question', None)
         # if is fully complete move to passed!
         passed = True
-        kl = KnowledgeLevel.get_latest_for_user(self.request.user)
+        kl = KnowledgeLevel.get_latest_for_user(user)
         for i in kl:
             if i.score < 90:
                 passed = False
@@ -164,10 +172,12 @@ class RunView(FormView):
         # else redirect to next question
         return redirect(reverse('adaptarith:run'))
 
+
 class PassedView(TemplateView):
     template_name = 'adaptarith/passed.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
+        user = utils.get_user(self.request)
+        context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(user)
         return context

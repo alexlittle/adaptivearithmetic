@@ -78,7 +78,7 @@ ADAPTARITH_RANGES = {
             }},
     'multiply':
         {'easy': {
-            'first_term': range(1, 5),
+            'first_term': range(2, 5),
             'second_term': range(1, 5)
         },
             'mod': {
@@ -96,7 +96,7 @@ ADAPTARITH_RANGES = {
     'divide':
         {'easy': {
             'first_term': range(10, 20),
-            'second_term': range(1, 5)
+            'second_term': range(2, 5)
         },
             'mod': {
                 'first_term': range(20, 50),
