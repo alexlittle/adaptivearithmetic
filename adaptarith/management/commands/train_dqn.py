@@ -25,12 +25,11 @@ from dqn_model.dqn import DQN
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
+from dqn_model import dqn_config
 
-dqn_config = settings.ADAPTARITH_TRAINING
+dqn_config = dqn_config.ADAPTARITH_TRAINING
 
-steps_done = 0
-
-env = LearnerEnv()
+env = LearnerEnv(dqn_config['max_steps'])
 # Get number of actions from gym action space
 n_actions = env.action_space.n
 state = env.reset()
@@ -45,8 +44,8 @@ device = torch.device(
     "cpu"
 )
 
-policy_net = DQN(n_observations, n_actions, settings.ADAPTARITH_TRAINING['hidden_dims']).to(device)
-target_net = DQN(n_observations, n_actions, settings.ADAPTARITH_TRAINING['hidden_dims']).to(device)
+policy_net = DQN(n_observations, dqn_config['hidden_dims'], n_actions).to(device)
+target_net = DQN(n_observations, dqn_config['hidden_dims'], n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 optimizer = optim.AdamW(policy_net.parameters(), lr=dqn_config['lr'], amsgrad=True)
 
@@ -68,41 +67,23 @@ class ReplayMemory(object):
     def __len__(self):
         return len(self.memory)
 
-memory = ReplayMemory(dqn_config['replay_memory'] )
+memory = ReplayMemory(dqn_config['replaybuffer_capacity'] )
 
-def select_action(state):
-    global steps_done
-    sample = random.random()
-    # linear decay
-    eps_threshold = max(dqn_config['eps_end'] ,
-                        dqn_config['eps_start']
-                        - (steps_done / dqn_config['eps_decay'])
-                        * (dqn_config['eps_start']
-                        - dqn_config['eps_end'] ))
-    # exponential decay
-    #eps_threshold = dqn_config['eps_end'] \
-    #                + (dqn_config['eps_start']
-    #                   - dqn_config['eps_end'] ) \
-    #                * math.exp(-1. * steps_done / dqn_config['eps_decay'])
-    steps_done += 1
-    if sample > eps_threshold:
+def select_action(state, epsilon):
+    if random.random() < epsilon:
+        return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
+    else:
         with torch.no_grad():
             # t.max(1) will return the largest column value of each row.
             # second column on max result is index of where max element was
             # found, so we pick action with the larger expected reward.
             return policy_net(state).max(1).indices.view(1, 1)
-    else:
-        return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long)
 
 
 def plot_rewards(show_result=False, save_path=None):
     plt.figure(2)
     rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
-    if show_result:
-        plt.title('Result')
-    else:
-        plt.clf()
-        plt.title('Training...')
+    plt.title('Result')
     plt.xlabel('Episode')
     plt.ylabel('Rewards')
     plt.plot(rewards_t.numpy())
@@ -118,11 +99,7 @@ def plot_rewards(show_result=False, save_path=None):
 def plot_durations(show_result=False, save_path=None):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
-    if show_result:
-        plt.title('Result')
-    else:
-        plt.clf()
-        plt.title('Training...')
+    plt.title('Result')
     plt.xlabel('Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
@@ -201,20 +178,23 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dqn_config['batch_size'] = options['batch_size']
-        dqn_config['num_episodes'] = options['num_episodes']
+        num_episodes = dqn_config['num_episodes'] = options['num_episodes']
+        dqn_config['epsilon_decay'] = options['num_episodes'] * 3 / 4
         start_time = time.time()
-        for i_episode in range(dqn_config['num_episodes']):
+
+        epsilon = dqn_config['epsilon_start']
+        for episode in range(num_episodes):
             # Initialize the environment and get its state
             state = env.reset()
-            print(f"Episode: {i_episode}")
-            env.render()
+            ep_start_time = time.time()
             total_reward = 0
             state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             for t in count():
-                action = select_action(state)
+                action = select_action(state, epsilon)
                 observation, reward, done, _  = env.step(action.item())
-                reward = torch.tensor([reward], device=device)
                 total_reward += reward
+                reward = torch.tensor([reward], device=device)
+
                 if done:
                     next_state = None
                 else:
@@ -242,8 +222,14 @@ class Command(BaseCommand):
                 if done:
                     episode_durations.append(t + 1)
                     episode_rewards.append(total_reward)
-                    env.render()
                     break
+
+            ep_time = time.time() - ep_start_time
+            print(f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, "
+                f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
+            epsilon = max(dqn_config['epsilon_end'],
+                          epsilon - (dqn_config['epsilon_start']
+                                     - dqn_config['epsilon_end']) / dqn_config['epsilon_decay'])
         print('Complete')
 
         end_time = time.time()
@@ -255,7 +241,7 @@ class Command(BaseCommand):
         output_dir = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', timestamp)
         os.makedirs(output_dir, exist_ok=True)
 
-        model_output_file = os.path.join(output_dir, "model .pth")
+        model_output_file = os.path.join(output_dir, "model.pth")
         durations_file = os.path.join(output_dir, "results-durations.png")
         rewards_file = os.path.join(output_dir, "results-rewards.png")
         config_output_file = os.path.join(output_dir, "config.json")

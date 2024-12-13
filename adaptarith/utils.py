@@ -44,10 +44,10 @@ def generate_pre_test(training=False, user=None):
     for level in settings.ADAPTARITH_LEVELS:
         level_questions = []
         for topic in settings.ADAPTARITH_TOPICS:
-            q1 = generate_question(topic,level, pretest=True, training=training, user=user)
-            level_questions.append(q1)
-            q2 = generate_question(topic,level, pretest=True,training=training, user=user)
-            level_questions.append(q2)
+            for x in range(settings.ADAPTARITH_PRETEST_NUM):
+                q = generate_question(topic,level, pretest=True, training=training, user=user)
+                level_questions.append(q)
+        # only shuffle the level questions, so the easier questions come first in the pre-test, harder later
         random.shuffle(level_questions)
         questions = questions + level_questions
     return questions
@@ -90,5 +90,4 @@ def get_next_question(user=None,
         print("")
         print("Q-values:", q_values.numpy())
         print(f"Action: {action},  Level: {level}, Topic: {topic}")
-
     return generate_question(topic, level, user=user)

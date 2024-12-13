@@ -13,6 +13,9 @@
     {% endblocktrans %}
 </p>
 
-<a href="{% url 'adaptarith:pretest_start' %}">Start....</a>
+<ul>
+<li><a href="{% url 'adaptarith:pretest_start' %}">Start with pre-test....</a></li>
 
+<li><a href="{% url 'adaptarith:run' %}">Start without pre-test....</a></li>
+</ul>
 {% endblock %}

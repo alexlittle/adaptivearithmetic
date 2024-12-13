@@ -113,10 +113,11 @@ class RunView(FormView):
 
     def get_question(self, knowledge_levels):
 
-        q_id = self.request.session['current_question']
-        if not q_id:
+        try:
+            q_id = self.request.session['current_question']
+        except KeyError:
             #generate
-            q_id = utils.get_next_question(user=self.request.user)
+            q_id = utils.get_next_question(user=self.request.user).id
 
         self.request.session['current_question'] = q_id
         self.request.session.modified = True
@@ -126,8 +127,9 @@ class RunView(FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(self.request.user)
-        next_question = self.get_question(context['knowledge_levels'])
-        context['question'] = utils.format_question(next_question)
+        next_question_id = self.get_question(context['knowledge_levels'])
+        question = Question.objects.get(pk=next_question_id)
+        context['question'] = utils.format_question(question)
         return context
 
     def form_valid(self, form):
@@ -152,7 +154,12 @@ class RunView(FormView):
         # remove current question for session
         self.request.session.pop('current_question', None)
         # if is fully complete move to passed!
-        if KnowledgeLevel.get_latest_for_user(self.request.user):
+        passed = True
+        kl = KnowledgeLevel.get_latest_for_user(self.request.user)
+        for i in kl:
+            if i.score < 90:
+                passed = False
+        if passed:
             return redirect(reverse('adaptarith:passed'))
         # else redirect to next question
         return redirect(reverse('adaptarith:run'))

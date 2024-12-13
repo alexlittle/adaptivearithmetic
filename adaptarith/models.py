@@ -71,7 +71,18 @@ class KnowledgeLevel(models.Model):
             topic__in=[entry['topic'] for entry in latest_dates],
             create_date__in=[entry['latest_date'] for entry in latest_dates],
         )
-        return most_recent_rows
+        user_topics = {entry['topic'] for entry in latest_dates}
+        missing_topics = set(settings.ADAPTARITH_TOPICS) - user_topics
+
+        # Add default rows for missing topics
+        default_rows = [
+            KnowledgeLevel(user=user, topic=topic, create_date=None)  # Set default values as needed
+            for topic in missing_topics
+        ]
+
+        all_rows = list(most_recent_rows) + default_rows
+
+        return all_rows
 
     @staticmethod
     def get_latest_for_user_as_list(user):

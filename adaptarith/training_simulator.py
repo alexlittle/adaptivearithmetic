@@ -39,6 +39,28 @@ class LearnerEnv(gym.Env):
     def _simulate_pre_test(self):
         return [random.choice(range(0,90)) for _ in settings.ADAPTARITH_TOPICS]
 
+    # penalty for giving same topic X times in a row
+    def _calc_repetition_penalty(self, topic):
+        self.last_actions.append(topic)
+        if len(self.last_actions) > settings.ADAPTARITH_MAX_REPETITIONS:
+            self.last_actions.pop(0)
+
+        if len(self.last_actions) == settings.ADAPTARITH_MAX_REPETITIONS and all(
+                a == self.last_actions[0] for a in self.last_actions):
+            return settings.ADAPTARITH_REPETITION_PENALTY
+        else:
+            return 0
+
+    # penalty for not selecting topic with the lowest knowledge level
+    # idea is to help ensure knowledge grows uniformly in each topic
+    def _calc_lowest_topic_penalty(self, topic):
+        lowest_value = min(self.state)
+        lowest_topics = [i for i, x in enumerate(self.state) if x == lowest_value]
+        if topic not in lowest_topics:
+            return settings.ADAPTARITH_LOWEST_TOPIC_PENALTY
+        else:
+            return 0
+
     def step(self, action):
 
         # 'translate' action into level and topic
@@ -46,16 +68,12 @@ class LearnerEnv(gym.Env):
         topic = action % len(settings.ADAPTARITH_TOPICS)
 
         # penalty for giving same topic X times in a row
-        self.last_actions.append(topic)
-        if len(self.last_actions) > settings.ADAPTARITH_MAX_REPETITIONS:
-            self.last_actions.pop(0)
+        repetition_penalty = self._calc_repetition_penalty(topic)
 
-        if len(self.last_actions) == settings.ADAPTARITH_MAX_REPETITIONS and all(a == self.last_actions[0] for a in self.last_actions):
-            repetition_penalty = settings.ADAPTARITH_REPETITION_PENALTY
-        else:
-            repetition_penalty = 0
+        # penalty for not selecting topic with the lowest knowledge level
+        lowest_topic_penalty = self._calc_lowest_topic_penalty(topic)
 
-        reward = self.simulate_learning(level, topic) - repetition_penalty
+        reward = self.simulate_learning(level, topic) - repetition_penalty - lowest_topic_penalty
         self.state[topic] += reward
         self.state[topic] = min(self.state[topic], 100)
         self.state[topic] = max(self.state[topic], 0)

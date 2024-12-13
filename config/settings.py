@@ -179,7 +179,7 @@ LOGIN_URL = '/admin/'
 LOGIN_REDIRECT_URL = '/'
 
 # path to the .pth model state dict to use
-ADAPTARITH_MODEL_PATH = 'rnn_dqn_model/model_rnn_dqn-2024-12-12-50000.pth'
+ADAPTARITH_MODEL_PATH = 'rnn_dqn_model/model_rnn_dqn-2024-12-13-30000.pth'
 
 from config.adaptarith_config import *
 try:
