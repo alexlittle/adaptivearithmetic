@@ -6,7 +6,6 @@ Settings for levels and topics available
 ADAPTARITH_LEVELS = ['easy', 'mod', 'hard', 'vhard']
 
 ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
-#ADAPTARITH_TOPICS = ['add', 'subtract', 'multiply', 'divide']
 
 
 '''
@@ -24,6 +23,10 @@ ADAPTARITH_POINTS_FOR_INCORRECT = 0
 
 # maximum increase in knowledge points per question
 ADAPTARITH_MAX_GAIN = 5
+
+ADAPTARITH_MAX_REPETITIONS = 3
+
+ADAPTARITH_REPETITION_PENALTY = ADAPTARITH_POINTS_FOR_CORRECT * 2/5
 
 ADAPTARITH_LEVEL_EASY_RANGE = {'lower': 0, 'upper': 25}
 ADAPTARITH_LEVEL_MOD_RANGE = {'lower': 25, 'upper': 50}

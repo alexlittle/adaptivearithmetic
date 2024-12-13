@@ -1,7 +1,5 @@
 '''
-DDQN Model
-
-Adapted from: https://github.com/fschur/DDQN-with-PyTorch-for-OpenAI-Gym/tree/master
+RNN DQN Model
 
 '''
 
@@ -39,8 +37,8 @@ device = torch.device(
 memory to save the state, action, reward sequence from the current episode. 
 """
 class ReplayBuffer:
-    def __init__(self, capacity):
-        self.capacity = capacity
+    def __init__(self):
+        self.capacity = rnn_dqn_config['replaybuffer_capacity']
         self.buffer = []
         self.position = 0
 
@@ -58,20 +56,20 @@ class ReplayBuffer:
 
 
 class DQNAgent:
-    def __init__(self, input_size, hidden_size, output_size, device, batch_size=32, gamma=0.99, lr=1e-3, capacity=100000):
-        self.gamma = gamma
-        self.batch_size = batch_size
+    def __init__(self, input_size, hidden_size, output_size, device, batch_size):
+        self.gamma = rnn_dqn_config['gamma']
+        self.batch_size = rnn_dqn_config['batch_size']
         self.policy_net = LSTM_DQN(input_size, hidden_size, output_size)
         self.target_net = LSTM_DQN(input_size, hidden_size, output_size)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
-        self.replay_buffer = ReplayBuffer(capacity)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=rnn_dqn_config['lr'])
+        self.replay_buffer = ReplayBuffer()
         self.steps_done = 0
         self.device = device
         self.policy_net.to(self.device)
         self.target_net.to(self.device)
 
-    def select_action(self, state, epsilon=0.1):
+    def select_action(self, state, epsilon):
         if random.random() < epsilon:
             return random.choice(range(self.policy_net.output_size))
         else:
@@ -161,14 +159,10 @@ def train_dqn(agent, env, num_episodes, epsilon_decay):
                 f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
 
 
-def plot_rewards(show_result=False, save_path=None):
+def plot_rewards(save_path=None):
     plt.figure(2)
     rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
-    if show_result:
-        plt.title('Result')
-    else:
-        plt.clf()
-        plt.title('Training...')
+    plt.title('Result')
     plt.xlabel('Episode')
     plt.ylabel('Rewards')
     plt.plot(rewards_t.numpy())
@@ -181,14 +175,10 @@ def plot_rewards(show_result=False, save_path=None):
     if save_path:
         plt.savefig(save_path, format='png', dpi=300)
 
-def plot_durations(show_result=False, save_path=None):
+def plot_durations(save_path=None):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
-    if show_result:
-        plt.title('Result')
-    else:
-        plt.clf()
-        plt.title('Training...')
+    plt.title('Result')
     plt.xlabel('Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
@@ -224,7 +214,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         rnn_dqn_config['batch_size'] = options['batch_size']
         rnn_dqn_config['num_episodes'] = options['num_episodes']
-        rnn_dqn_config['epsilon_decay'] = options['num_episodes']/2
+        rnn_dqn_config['epsilon_decay'] = options['num_episodes'] * 3/4
         start_time = time.time()
 
         env = LearnerEnv(rnn_dqn_config['max_steps'])
@@ -239,7 +229,7 @@ class Command(BaseCommand):
                          hidden_size,
                          n_actions,
                          device,
-                         batch_size=rnn_dqn_config['batch_size'])
+                         rnn_dqn_config['batch_size'])
         train_dqn(agent,
                   env,
                   rnn_dqn_config['num_episodes'],
@@ -265,5 +255,5 @@ class Command(BaseCommand):
         with open(config_output_file, "w") as file:
             json.dump(rnn_dqn_config, file, indent=4)
 
-        plot_durations(show_result=True, save_path=durations_file)
-        plot_rewards(show_result=True, save_path=rewards_file)
+        plot_durations(save_path=durations_file)
+        plot_rewards(save_path=rewards_file)

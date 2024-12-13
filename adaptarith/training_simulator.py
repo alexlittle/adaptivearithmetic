@@ -41,19 +41,19 @@ class LearnerEnv(gym.Env):
 
     def step(self, action):
 
-        self.last_actions.append(action)
-        if len(self.last_actions) > 7:
-            self.last_actions.pop(0)
-
-        # Apply a penalty for repetition
-        if len(self.last_actions) == 7 and all(a == self.last_actions[0] for a in self.last_actions):
-            repetition_penalty = 2
-        else:
-            repetition_penalty = 0
-
         # 'translate' action into level and topic
         level = action // len(settings.ADAPTARITH_TOPICS)
         topic = action % len(settings.ADAPTARITH_TOPICS)
+
+        # penalty for giving same topic X times in a row
+        self.last_actions.append(topic)
+        if len(self.last_actions) > settings.ADAPTARITH_MAX_REPETITIONS:
+            self.last_actions.pop(0)
+
+        if len(self.last_actions) == settings.ADAPTARITH_MAX_REPETITIONS and all(a == self.last_actions[0] for a in self.last_actions):
+            repetition_penalty = settings.ADAPTARITH_REPETITION_PENALTY
+        else:
+            repetition_penalty = 0
 
         reward = self.simulate_learning(level, topic) - repetition_penalty
         self.state[topic] += reward
@@ -98,7 +98,7 @@ class LearnerEnv(gym.Env):
         elif difficulty_mismatch == 1:
             reward = 0
         elif difficulty_mismatch == 2:
-            reward = -2.5
+            reward = -settings.ADAPTARITH_POINTS_FOR_CORRECT/2
         else:
             reward = -settings.ADAPTARITH_POINTS_FOR_CORRECT
 

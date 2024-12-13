@@ -20,26 +20,6 @@ class Command(BaseCommand):
         env = LearnerEnv()
         knowledge = env.reset()
 
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-
-        return
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-        knowledge, reward, _, _ = env.step(0)
-        print(knowledge, reward)
-
-
-
-        """
         if not options['auto']:
             print(knowledge)
             while True:
@@ -56,6 +36,5 @@ class Command(BaseCommand):
                     reward =  env.calculate_reward(l,0, True)
                     print(reward, end="\t")
                 print("")
-        """
 
 
