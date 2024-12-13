@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from itertools import count
 from datetime import datetime
 import torch.optim as optim
+from tensorboardX import SummaryWriter
+
 from adaptarith.training_simulator import LearnerEnv
 from rnn_dqn_model.rnn_dqn import LSTM_DQN
 
@@ -126,7 +128,7 @@ class DQNAgent:
 
 
 # Training loop example
-def train_dqn(agent, env, num_episodes, epsilon_decay):
+def train_dqn(agent, env, num_episodes, epsilon_decay, writer):
     epsilon = rnn_dqn_config['epsilon_start']
     for episode in range(num_episodes):
         state = env.reset()
@@ -155,6 +157,10 @@ def train_dqn(agent, env, num_episodes, epsilon_decay):
         epsilon = max(rnn_dqn_config['epsilon_end'],
                       epsilon - (rnn_dqn_config['epsilon_start'] - rnn_dqn_config['epsilon_end']) / epsilon_decay)
         ep_time = time.time() - ep_start_time
+        writer.add_scalar('Episode Reward', total_reward, episode)
+        writer.add_scalar('Episode Duration', episode_durations[-1], episode)
+        writer.add_scalar('Episode Epsilon', epsilon, episode)
+        writer.add_scalar('Episode Time', ep_time, episode)
         print(f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, "
                 f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
 
@@ -217,6 +223,10 @@ class Command(BaseCommand):
         rnn_dqn_config['epsilon_decay'] = options['num_episodes'] * 3/4
         start_time = time.time()
 
+        tb_run_dir = os.path.join(settings.BASE_DIR, 'rnn_dqn_model', 'runs')
+        os.makedirs(tb_run_dir, exist_ok=True)
+        writer = SummaryWriter(log_dir=tb_run_dir)
+
         env = LearnerEnv(rnn_dqn_config['max_steps'])
 
         state = env.reset()
@@ -233,9 +243,10 @@ class Command(BaseCommand):
         train_dqn(agent,
                   env,
                   rnn_dqn_config['num_episodes'],
-                  rnn_dqn_config['epsilon_decay'])
+                  rnn_dqn_config['epsilon_decay'],
+                  writer)
 
-
+        writer.close()
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Total runtime: {elapsed_time:.2f} seconds")

@@ -119,15 +119,14 @@ class RunView(FormView):
     template_name = 'adaptarith/run.html'
     form_class = AnswerForm
 
-    def get_question(self, knowledge_levels):
+    def get_question(self):
         try:
             q_id = self.request.session['current_question']
         except KeyError:
             user = utils.get_user(self.request)
             q_id = utils.get_next_question(user=user).id
-
-        self.request.session['current_question'] = q_id
-        self.request.session.modified = True
+            self.request.session['current_question'] = q_id
+            self.request.session.modified = True
 
         return q_id
 
@@ -135,7 +134,7 @@ class RunView(FormView):
         context = super().get_context_data(**kwargs)
         user = utils.get_user(self.request)
         context['knowledge_levels'] = KnowledgeLevel.get_latest_for_user(user)
-        next_question_id = self.get_question(context['knowledge_levels'])
+        next_question_id = self.get_question()
         question = Question.objects.get(pk=next_question_id)
         context['question'] = utils.format_question(question)
         return context

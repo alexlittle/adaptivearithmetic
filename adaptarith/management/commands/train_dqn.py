@@ -9,12 +9,12 @@ import time
 import json
 import random
 import os
-import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from tensorboardX import SummaryWriter
 from collections import namedtuple, deque
 from itertools import count
 from datetime import datetime
@@ -182,6 +182,10 @@ class Command(BaseCommand):
         dqn_config['epsilon_decay'] = options['num_episodes'] * 3 / 4
         start_time = time.time()
 
+        tb_run_dir = os.path.join(settings.BASE_DIR, 'dqn_model', 'runs')
+        os.makedirs(tb_run_dir, exist_ok=True)
+        writer = SummaryWriter(log_dir=tb_run_dir)
+
         epsilon = dqn_config['epsilon_start']
         for episode in range(num_episodes):
             # Initialize the environment and get its state
@@ -225,13 +229,18 @@ class Command(BaseCommand):
                     break
 
             ep_time = time.time() - ep_start_time
+            writer.add_scalar('Episode Reward', total_reward, episode)
+            writer.add_scalar('Episode Duration', episode_durations[-1], episode)
+            writer.add_scalar('Episode Epsilon', epsilon, episode)
+            writer.add_scalar('Episode Time', ep_time, episode)
+
             print(f"Episode {episode}/{num_episodes}, Duration {episode_durations[-1]}, "
                 f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
             epsilon = max(dqn_config['epsilon_end'],
                           epsilon - (dqn_config['epsilon_start']
                                      - dqn_config['epsilon_end']) / dqn_config['epsilon_decay'])
         print('Complete')
-
+        writer.close()
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Total runtime: {elapsed_time:.2f} seconds")

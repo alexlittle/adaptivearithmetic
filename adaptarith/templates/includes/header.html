@@ -14,7 +14,6 @@
     <div class="collapse navbar-collapse justify-content-end" id="navbarScroll">
       <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" >
         {% if user.is_authenticated %}
-            <li>{% trans 'Welcome' %}, {{ user.username }}</li>
             <li> <form method="post" action="{% url 'adaptarith:logout' %}" style="display: inline;">
                 {% csrf_token %}
             <button type="submit">{% trans 'Logout' %}</button>
