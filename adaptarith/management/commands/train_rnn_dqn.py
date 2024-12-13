@@ -3,13 +3,11 @@ RNN DQN Model
 
 '''
 
-import json
 import os
 import time
 import torch
 import torch.nn as nn
 import random
-import matplotlib.pyplot as plt
 from itertools import count
 from datetime import datetime
 import torch.optim as optim
@@ -22,6 +20,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext_lazy as _
 from rnn_dqn_model import rnn_dqn_config
+from adaptarith import training_utils
 
 rnn_dqn_config = rnn_dqn_config.ADAPTARITH_TRAINING
 
@@ -165,38 +164,6 @@ def train_dqn(agent, env, num_episodes, epsilon_decay, writer):
                 f"Total Reward: {total_reward:.2f}, Epsilon: {epsilon:.2f}, Time: {ep_time:.2f}")
 
 
-def plot_rewards(save_path=None):
-    plt.figure(2)
-    rewards_t = torch.tensor(episode_rewards, dtype=torch.float)
-    plt.title('Result')
-    plt.xlabel('Episode')
-    plt.ylabel('Rewards')
-    plt.plot(rewards_t.numpy())
-    # Take 100 episode averages and plot them too
-    if len(rewards_t) >= 100:
-        means = rewards_t.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
-
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300)
-
-def plot_durations(save_path=None):
-    plt.figure(1)
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
-    plt.title('Result')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(durations_t.numpy())
-    # Take 100 episode averages and plot them too
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
-
-    if save_path:
-        plt.savefig(save_path, format='png', dpi=300)
-
 
 class Command(BaseCommand):
     help = _(u"For training DDQN model")
@@ -223,7 +190,8 @@ class Command(BaseCommand):
         rnn_dqn_config['epsilon_decay'] = options['num_episodes'] * 3/4
         start_time = time.time()
 
-        tb_run_dir = os.path.join(settings.BASE_DIR, 'rnn_dqn_model', 'runs')
+        tb_run_dir = os.path.join(settings.BASE_DIR, 'rnn_dqn_model', 'runs',
+                                  datetime.now().strftime('%Y-%m-%d-%H_%M_%S'))
         os.makedirs(tb_run_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=tb_run_dir)
 
@@ -251,20 +219,10 @@ class Command(BaseCommand):
         elapsed_time = end_time - start_time
         print(f"Total runtime: {elapsed_time:.2f} seconds")
         rnn_dqn_config['runtime'] = elapsed_time
+
         # write pth, graphs and config
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        output_dir = os.path.join(settings.BASE_DIR, 'rnn_dqn_model', 'results', timestamp)
-        os.makedirs(output_dir, exist_ok=True)
-
-        model_output_file = os.path.join(output_dir, "model.pth")
-        durations_file = os.path.join(output_dir, "results-durations.png")
-        rewards_file = os.path.join(output_dir, "results-rewards.png")
-        config_output_file = os.path.join(output_dir, "config.json")
-
-        torch.save(agent.policy_net.state_dict(), model_output_file)
-
-        with open(config_output_file, "w") as file:
-            json.dump(rnn_dqn_config, file, indent=4)
-
-        plot_durations(save_path=durations_file)
-        plot_rewards(save_path=rewards_file)
+        training_utils.save_results('rnn_dqn_model',
+                                    agent.policy_net.state_dict(),
+                                    rnn_dqn_config,
+                                    episode_durations,
+                                    episode_rewards)

@@ -5,7 +5,7 @@ ADAPTARITH_TRAINING = {
     'max_steps': 100, # max no steps per episode whilst training
     'epsilon_start': 1.0,
     'epsilon_end': 0.01,
-    'replaybuffer_capacity': 500000,
+    'replaybuffer_capacity': 2000000,
     'gamma': 0.99,
     'lr': 1e-3,
 

@@ -25,8 +25,8 @@ ADAPTARITH_MAX_GAIN = 5
 ADAPTARITH_MAX_REPETITIONS = 4
 ADAPTARITH_REPETITION_PENALTY = ADAPTARITH_POINTS_FOR_CORRECT * 2/5
 
-# penalty for not selecting topic with the lowest knowledge level
-ADAPTARITH_LOWEST_TOPIC_PENALTY = ADAPTARITH_POINTS_FOR_CORRECT * 2/5
+# penalty for not selecting topic with the lowest knowledge level (used for training only)
+ADAPTARITH_LOWEST_TOPIC_PENALTY = ADAPTARITH_POINTS_FOR_CORRECT * 1/5
 
 # number of questions per topic per level in pre-test
 ADAPTARITH_PRETEST_NUM = 2 # for 4 topics and 4 levels then total questions = 16 times this value
