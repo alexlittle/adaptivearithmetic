@@ -167,3 +167,5 @@ cython_debug/
 /rnn_dqn_model/results/
 /dqn_model/runs/
 /rnn_dqn_model/runs/
+/data/
+/adaptarith/management/commands/scratch.py

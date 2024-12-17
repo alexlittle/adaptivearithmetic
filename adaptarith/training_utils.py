@@ -39,8 +39,8 @@ def plot_rewards(episode_rewards, save_path=None):
         plt.savefig(save_path, format='png', dpi=300)
 
 
-def save_results(model_dir, state_dict, config, episode_durations, episode_rewards):
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+def save_results(model_dir, state_dict, config, episode_durations, episode_rewards, path_postfix=""):
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S') + path_postfix
     output_dir = os.path.join(settings.BASE_DIR, model_dir, 'results', timestamp)
     os.makedirs(output_dir, exist_ok=True)
 

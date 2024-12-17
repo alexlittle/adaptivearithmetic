@@ -71,9 +71,9 @@ class LearnerEnv(gym.Env):
         repetition_penalty = self._calc_repetition_penalty(topic)
 
         # penalty for not selecting topic with the lowest knowledge level
-        lowest_topic_penalty = self._calc_lowest_topic_penalty(topic)
+        #lowest_topic_penalty = self._calc_lowest_topic_penalty(topic)
 
-        reward = self.simulate_learning(level, topic) - repetition_penalty - lowest_topic_penalty
+        reward = self.simulate_learning(level, topic) - repetition_penalty
         self.state[topic] += reward
         self.state[topic] = min(self.state[topic], 100)
         self.state[topic] = max(self.state[topic], 0)
