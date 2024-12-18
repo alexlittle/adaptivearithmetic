@@ -19,15 +19,12 @@ Has the scores categorized in blocks of 15, with the num activities completed be
 
 - 100k episodes
     - with training data set
-        - 
-      - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-        - 
+    - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
 
 - 250k episodes
-  - with training data set
-    - 
-  - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-    -
+    - with training data set
+    - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
+
 
 
 
@@ -56,17 +53,17 @@ Has the scores categorized in blocks of 10, with the num activities completed be
     - with training data set
         - random 14.29%, actual: 17.23%
         - Num correct 1630, num incorrect: 7832
-      - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
+    - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
         - random 14.29%, actual: 15.48%
         - Num correct 1860, num incorrect: 10153
 
 - 250k episodes
-  - with training data set
-    - random 14.29%, actual: 16.97%
-    - Num correct 1606, num incorrect: 7856
-  - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-    - random 14.29%, actual: 15.70%
-    - Num correct 1886, num incorrect: 10127
+    - with training data set
+        - random 14.29%, actual: 16.97%
+        - Num correct 1606, num incorrect: 7856
+      - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
+        - random 14.29%, actual: 15.70%
+        - Num correct 1886, num incorrect: 10127
 
 
 ### Conclusion
