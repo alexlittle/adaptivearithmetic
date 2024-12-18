@@ -8,7 +8,7 @@
 
 ### Configs
 
-- 100k episodes - dqn_model/results/-100k
+- 100k episodes - dqn_model/results/20241218103900-100k
 - 250k episodes - dqn_model/results/-250k
 - using data: data/ou/studentassessment_course_bbb2013b_with_activities.csv
 - Simulator v8
@@ -32,11 +32,10 @@ Has the scores categorized in blocks of 15, with the num activities completed be
     - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
 
 
-
-
 ### Conclusion
 
-
+The "close" values here aren't so meaningful, since at random there's probability of 0.52 that the random number will 
+be  +/-1 of a number in the set of actions (0-4) anyway
 
 
 
@@ -71,11 +70,12 @@ Has the scores categorized in blocks of 10, with the num activities completed be
         - Exactly num correct 2428, num incorrect: 7034
         - Close(+/-1) num correct 6770, num incorrect: 2692
     - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-       - random 14.29, actual exact: 24.05, actual close 70.96
-       - Exactly num correct 2889, num incorrect: 9124
-       - Close(+/-1) num correct 8524, num incorrect: 3489
+        - random 14.29, actual exact: 24.05, actual close 70.96
+        - Exactly num correct 2889, num incorrect: 9124
+        - Close(+/-1) num correct 8524, num incorrect: 3489
 
 
 ### Conclusion
 
-Basically very little better than random
+Quite a lot better than random. Probability of 0.408 that a random number (from 0-6) with be within +/-1 of another
+number 0-6 anyway
