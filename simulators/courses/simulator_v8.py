@@ -18,7 +18,7 @@ class LearningPredictorEnv(gym.Env):
         self.all_users = self.all_activity['id_student'].unique()
         self.max_sequence_length = max_sequence_length
         self.observation_space = spaces.Box(low=0, high=self.max_sequence_length, shape=(1,), dtype=np.int32)
-        self.action_space = spaces.Discrete(7)  # action 0 = end of sequence else Actions are predicted score categories
+        self.action_space = spaces.Discrete(5)  # action 0 = end of sequence else Actions are predicted score categories
         self.learner_sequence = []
         self.current_user_id = 0
         self.current_user_data = []
@@ -72,7 +72,7 @@ class LearningPredictorEnv(gym.Env):
                 else:
                     padded_arr[idx] = x /320
             elif x != -1:
-                padded_arr[idx] = x / 6
+                padded_arr[idx] = x / 4
         return padded_arr
 
     def _get_true_next_score(self):
@@ -89,7 +89,7 @@ class LearningPredictorEnv(gym.Env):
         return next_score, next_activities
 
     def categorize_score(self, score):
-        for idx, x in enumerate(range(50, 91, 10)):
+        for idx, x in enumerate(range(50, 91, 15)):
             if score < x:
                 return idx
         return idx + 1

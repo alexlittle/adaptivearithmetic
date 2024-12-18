@@ -15,7 +15,7 @@ from datetime import datetime
 import torch.optim as optim
 from tensorboardX import SummaryWriter
 
-from simulators.courses.simulator_v5 import HMMPredictorEnv
+from simulators.courses.simulator_v8 import LearningPredictorEnv
 from rnn_dqn_model.rnn_dqn import LSTM_DQN
 
 from django.conf import settings
@@ -26,8 +26,8 @@ from adaptarith import training_utils
 
 rnn_dqn_config = rnn_dqn_config.ADAPTARITH_TRAINING
 
-rnn_dqn_config["simulator"] = "simulators.courses.simulator_v5"
-
+rnn_dqn_config["simulator"] = "simulators.courses.simulator_v8"
+data_file_path = os.path.join(settings.BASE_DIR, 'data','ou','studentassessment_course_bbb2013b_with_activities.csv')
 episode_durations = []
 episode_rewards = []
 
@@ -92,8 +92,9 @@ class DQNAgent:
         # Prepare the batch
         states, actions, next_states, rewards, dones = zip(*batch)
 
+        print(next_states)
         states = torch.tensor(states, dtype=torch.float32).to(self.device)
-        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+        next_states = torch.tensor(next_states, dtype=torch.float64).to(self.device)
         actions = torch.tensor(actions, dtype=torch.long).to(self.device)
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         dones = torch.tensor(dones, dtype=torch.uint8).to(self.device)
@@ -198,14 +199,13 @@ class Command(BaseCommand):
                                   datetime.now().strftime('%Y-%m-%d-%H_%M_%S'))
         os.makedirs(tb_run_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=tb_run_dir)
+        rnn_dqn_config['simulator'] = "simulator_v8"
+        rnn_dqn_config['data_file'] = data_file_path
 
-
-        env = HMMPredictorEnv(settings.BASE_DIR)
-
-        state = env.reset()
+        env = LearningPredictorEnv(data_file_path)
 
         n_actions = env.action_space.n
-        n_observations = len(state)
+        n_observations = len(env.reset())
         hidden_size = rnn_dqn_config['hidden_dims']
 
         agent = DQNAgent(n_observations,
@@ -222,8 +222,26 @@ class Command(BaseCommand):
         writer.close()
         end_time = time.time()
         elapsed_time = end_time - start_time
+        # average of all episode rewards
+        average_reward = sum(agent.episode_rewards) / len(agent.episode_rewards)
+        print(f"Average rewards (overall): {average_reward:.2f} ")
+
+        # average of last half of episode rewards
+        last_half = agent.episode_rewards[len(agent.episode_rewards) // 2:]
+        average_reward_last_half = sum(last_half) / len(last_half)
+        print(f"Average rewards (last half): {average_reward_last_half:.2f} ")
+
+        last_100 = agent.episode_rewards[len(agent.episode_rewards) - 100:]
+        average_reward_last_100 = sum(last_100) / len(last_100)
+        print(f"Average rewards (last 100): {average_reward_last_100:.2f} ")
+
         print(f"Total runtime: {elapsed_time:.2f} seconds")
         rnn_dqn_config['runtime'] = elapsed_time
+        rnn_dqn_config['average_reward'] = average_reward
+        rnn_dqn_config['average_reward_last_half'] = average_reward_last_half
+        rnn_dqn_config['average_reward_last_100'] = average_reward_last_100
+
+        rnn_dqn_config['episode_rewards'] = agent.episode_rewards
 
         # write pth, graphs and config
         training_utils.save_results('rnn_dqn_model',
