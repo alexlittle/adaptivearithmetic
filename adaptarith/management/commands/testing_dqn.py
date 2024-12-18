@@ -24,7 +24,7 @@ def normalise_sequence(learner_sequence, max_sequence_length):
             else:
                 padded_arr[idx] = x /320
         elif x != -1:
-            padded_arr[idx] = x / 4
+            padded_arr[idx] = x / 6
     return padded_arr
 
 def get_true_next_score(index, current_user_data):
@@ -58,14 +58,14 @@ class Command(BaseCommand):
     errors = []
 
     def handle(self, *args, **options):
-        state_dict_path = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', "", "model.pth")
+        state_dict_path = os.path.join(settings.BASE_DIR, 'dqn_model', 'results', "20241217200224-250k", "model.pth")
 
-        data_file = os.path.join(settings.BASE_DIR, 'data', 'ou', "studentassessment_course_bbb2013b_with_activities.csv")
+        data_file = os.path.join(settings.BASE_DIR, 'data', 'ou', "studentassessment_course_bbb2013j_with_activities.csv")
 
         # load model and DQN
         model = DQN(input_size=21,
                          hidden_dims=128,
-                         output_size=5)
+                         output_size=7)
         model.load_state_dict(torch.load(state_dict_path, weights_only=False))
         model.eval()
 
@@ -73,8 +73,12 @@ class Command(BaseCommand):
         activity = pd.read_csv(data_file)
         all_users = activity['id_student'].unique()
 
-        num_correct = 0
-        num_incorrect = 0
+        num_exact_correct = 0
+        num_exact_incorrect = 0
+
+        num_close_correct = 0
+        num_close_incorrect = 0
+
         # loop through users until no more activity
         for user in all_users:
             current_user_data = activity.loc[activity['id_student'] == user].sort_values(by='date_submitted')
@@ -95,21 +99,34 @@ class Command(BaseCommand):
                 print(actual_next_score_category)
 
                 predicted_next_score = get_predicted_next_score(model, normalised_sequence)
-                print(predicted_next_score)
+                print(predicted_next_score-1)
+
                 if actual_next_score_category == -1:
                     if predicted_next_score == 0:
-                        num_correct += 1
+                        num_exact_correct += 1
                     else:
-                        num_incorrect += 1
+                        num_exact_incorrect += 1
+                    if abs(predicted_next_score-1) < 2:
+                        num_close_correct += 1
+                    else:
+                        num_close_incorrect += 1
                     break
+
                 learner_sequence.append(actual_next_score_category)
                 learner_sequence.append(next_activities_count)
-                if actual_next_score_category-1 == predicted_next_score:
-                    num_correct += 1
-                else:
-                    num_incorrect += 1
 
-        expected_from_random = 100/5
-        actual = num_correct*100 / (num_correct+num_incorrect)
-        print(f"random {expected_from_random:.2f}, actual: {actual:.2f}")
-        print(f"Num correct {num_correct}, num incorrect: {num_incorrect}")
+                if actual_next_score_category == predicted_next_score-1:
+                    num_exact_correct += 1
+                else:
+                    num_exact_incorrect += 1
+                if abs(actual_next_score_category - (predicted_next_score-1)) <= 1:
+                    num_close_correct += 1
+                else:
+                    num_close_incorrect += 1
+
+        expected_from_random = 100/7
+        actual_exact = num_exact_correct*100 / (num_exact_correct+num_exact_incorrect)
+        actual_close = num_close_correct * 100 / (num_close_correct + num_close_incorrect)
+        print(f"random {expected_from_random:.2f}, actual exact: {actual_exact:.2f}, actual close {actual_close:.2f}")
+        print(f"Exactly num correct {num_exact_correct}, num incorrect: {num_exact_incorrect}")
+        print(f"Close(+/-1) num correct {num_close_correct}, num incorrect: {num_close_incorrect}")

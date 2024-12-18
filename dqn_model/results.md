@@ -19,8 +19,14 @@ Has the scores categorized in blocks of 15, with the num activities completed be
 
 - 100k episodes
     - with training data set
+        - random 20.00, actual exact: 56.90, actual close(+/-1) 83.40
+        - Exactly num correct 5384, num incorrect: 4078
+        - Close(+/-1) num correct 7891, num incorrect: 1571
     - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-
+        - random 20.00, actual exact: 54.43, actual close(+/-1) 82.34
+        - Exactly num correct 6539, num incorrect: 5474
+        - Close(+/-1) num correct 9891, num incorrect: 2122
+        - 
 - 250k episodes
     - with training data set
     - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
@@ -30,7 +36,7 @@ Has the scores categorized in blocks of 15, with the num activities completed be
 
 ### Conclusion
 
-Basically very little better than random
+
 
 
 
@@ -51,19 +57,23 @@ Has the scores categorized in blocks of 10, with the num activities completed be
 
 - 100k episodes
     - with training data set
-        - random 14.29%, actual: 17.23%
-        - Num correct 1630, num incorrect: 7832
+        - random 14.29, actual exact: 24.09, actual close 69.43
+        - Exactly num correct 2279, num incorrect: 7183
+        - Close(+/-1) num correct 6569, num incorrect: 2893
     - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-        - random 14.29%, actual: 15.48%
-        - Num correct 1860, num incorrect: 10153
+        - random 14.29, actual exact: 21.97, actual close 68.74
+        - Exactly num correct 2639, num incorrect: 9374
+        - Close(+/-1) num correct 8258, num incorrect: 3755
 
 - 250k episodes
     - with training data set
-        - random 14.29%, actual: 16.97%
-        - Num correct 1606, num incorrect: 7856
-      - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
-        - random 14.29%, actual: 15.70%
-        - Num correct 1886, num incorrect: 10127
+        - random 14.29, actual exact: 25.66, actual close 71.55
+        - Exactly num correct 2428, num incorrect: 7034
+        - Close(+/-1) num correct 6770, num incorrect: 2692
+    - with test dataset (data/ou/studentassessment_course_bbb2013j_with_activities.csv)
+       - random 14.29, actual exact: 24.05, actual close 70.96
+       - Exactly num correct 2889, num incorrect: 9124
+       - Close(+/-1) num correct 8524, num incorrect: 3489
 
 
 ### Conclusion
